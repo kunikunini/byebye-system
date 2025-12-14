@@ -1,0 +1,32 @@
+name: db-push
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'push' to apply Drizzle migrations to the database"
+        required: true
+        default: "push"
+
+jobs:
+  push:
+    if: ${{ github.event.inputs.confirm == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Drizzle push (apply migrations)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx drizzle-kit push
+
