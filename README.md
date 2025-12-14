@@ -9,6 +9,10 @@
 - `SUPABASE_SERVICE_ROLE_KEY`（サーバのみ・公開禁止）
 - `DATABASE_URL`（Supabase Postgres への接続文字列）
 
+補足（適用範囲と運用）
+- Vercel: 可能であれば「All Environments」で設定を推奨。最低でも Production と Preview の両方に設定が必須です。
+- ローカル開発: Vercel の Development 環境変数ではなく、`.env.local` を使用してください（コミットしない）。
+
 雛形: `config/.env.example`
 
 ## Supabase セットアップ
@@ -18,6 +22,9 @@
 4. Drizzle でスキーマを反映:
    - 差分生成: `npx drizzle-kit generate`
    - 反映: `npx drizzle-kit push`
+   - 重要: これらのコマンドは Vercel 上では実行しません。開発者のローカル環境（このリポジトリを clone した端末）で実行してください。
+   - 生成されるマイグレーション/スキーマ差分（例: `drizzle/` 配下）は GitHub にコミットして管理します。
+   - 初回セットアップ時に DB 反映を行わない場合、アプリは正常に動作しません。
 
 ## ローカル起動
 - 依存導入: `npm ci`
