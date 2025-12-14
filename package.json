@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
-    "drizzle-orm": "^0.34.1",
+    "drizzle-orm": "^0.45.1",
     "next": "^14.2.5",
     "postgres": "^3.4.4",
     "react": "^18.3.1",
@@ -26,7 +26,7 @@
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
     "autoprefixer": "^10.4.19",
-    "drizzle-kit": "^0.26.2",
+    "drizzle-kit": "^0.31.8",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.5",
     "postcss": "^8.4.38",
@@ -37,4 +37,3 @@
     "vitest": "^2.1.4"
   }
 }
-
