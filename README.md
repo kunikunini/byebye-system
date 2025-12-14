@@ -17,7 +17,7 @@
 
 ## Supabase セットアップ
 1. Supabase プロジェクトを作成し、URL/Keys を取得。
-2. Storage にバケット `captures` を作成（Public: Off 推奨、RLSは匿名読み取りルールを用途に応じて設定）。※ 画像アップロードは Storage バケット名 `captures` を前提としています（名称変更する場合はコード側も修正が必要です）。
+2. Storage にバケット `captures` を作成（Public: Off 推奨）。Phase1 ではサーバ側で Service Role Key を使用するため RLS は必須ではありません。将来的にクライアント直アクセスを行う場合に RLS を検討してください。※ 画像アップロードは Storage バケット名 `captures` を前提としています（名称変更する場合はコード側も修正が必要です）。
 3. `DATABASE_URL` を取得し、ローカル/Vercel に設定。
 4. Drizzle でスキーマを反映:
    - 差分生成: `npx drizzle-kit generate`
