@@ -1,0 +1,2 @@
+This file exists only to trigger the GitHub Actions workflow 'db-push'.
+Deleting it is safe; it has no runtime effect.
