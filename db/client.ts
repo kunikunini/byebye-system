@@ -12,8 +12,12 @@ export function getDb() {
     throw new Error('DATABASE_URL is not set');
   }
   if (global.__db__) return global.__db__;
-  const client = postgres(process.env.DATABASE_URL, { prepare: true, max: 1 });
+  const client = postgres(process.env.DATABASE_URL, {
+    prepare: true,
+    max: 1,
+    // Supabase本番接続でのTLS必須を想定（'?sslmode=require' が付与されていても明示）
+    ssl: 'require',
+  });
   global.__db__ = drizzle(client, { schema });
   return global.__db__;
 }
-
