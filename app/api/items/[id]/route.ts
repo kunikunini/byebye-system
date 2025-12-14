@@ -32,3 +32,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   });
 }
 
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const db = getDb();
+  await db.delete(items).where(eq(items.id, params.id));
+  return new Response(null, { status: 204 });
+}
+

@@ -20,11 +20,12 @@ export async function POST(req: NextRequest) {
   const uploaded: string[] = [];
 
   for (const f of files) {
-    const filename = `${item.sku}_${kind}.jpg`;
+    // Append timestamp to prevent overwrite and caching issues
+    const filename = `${item.sku}_${kind}_${Date.now()}.jpg`;
     const array = new Uint8Array(await f.arrayBuffer());
     const { error } = await supa.storage.from('captures').upload(filename, array, {
       contentType: 'image/jpeg',
-      upsert: true,
+      upsert: false, // uniqueness guaranteed by timestamp
     });
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     uploaded.push(filename);
   }
 
-  return Response.json({ ok: true, uploaded });
+  // return Response.json({ ok: true, uploaded });
+  return Response.redirect(new URL(`/dashboard/items/${itemId}`, req.url), 303);
 }
 

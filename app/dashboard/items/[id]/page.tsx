@@ -4,6 +4,10 @@ import { getDb } from '@/db/client';
 import { items, captures } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
+import DeleteItemButton from './delete-button';
+import DeleteCaptureButton from './delete-capture-button';
+import UploadForm from './upload-form';
+
 export default async function ItemDetail({ params }: { params: { id: string } }) {
   const db = getDb();
   const id = params.id;
@@ -21,9 +25,6 @@ export default async function ItemDetail({ params }: { params: { id: string } })
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{item.sku}</h1>
-        <Link href="/dashboard/items" className="text-blue-600 underline">
-          ← 一覧へ
-        </Link>
       </div>
 
       <form action={`/api/items/${id}`} method="post" className="space-y-4">
@@ -59,37 +60,42 @@ export default async function ItemDetail({ params }: { params: { id: string } })
             </select>
           </div>
         </div>
-        <button className="rounded bg-black px-3 py-2 text-white" type="submit">
-          保存
-        </button>
+        <div className="flex items-center justify-start gap-4 border-t pt-4">
+          <Link
+            href="/dashboard/items"
+            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-lg active:scale-95"
+          >
+            一覧へ戻る
+          </Link>
+          <button className="rounded bg-black px-6 py-2 font-medium text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-gray-800 hover:shadow-lg active:scale-95" type="submit">
+            保存
+          </button>
+          <DeleteItemButton id={id} />
+        </div>
       </form>
+
+      {/* 旧配置削除 */}
+
+
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">画像アップロード</h2>
-        <form action="/api/upload" method="post" encType="multipart/form-data" className="space-y-2">
-          <input type="hidden" name="itemId" value={id} />
-          <div className="flex items-center gap-3">
-            <label className="text-sm">kind</label>
-            <select name="kind" className="rounded border px-3 py-2">
-              {['front', 'back', 'spine', 'label', 'other'].map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-            <input type="file" name="file" multiple accept="image/*" className="text-sm" />
-            <button className="rounded border px-3 py-2" type="submit">
-              アップロード
-            </button>
-          </div>
-        </form>
+        <UploadForm itemId={id} />
 
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {caps.map((c) => (
-            <li key={c.id} className="rounded border p-2 text-sm">
-              <div className="font-mono">{c.storagePath}</div>
-              <div className="text-gray-600">{c.kind}</div>
-              <div className="text-gray-500">{c.createdAt?.toISOString?.() || ''}</div>
+            <li key={c.id} className="relative rounded border p-2 text-sm">
+              <DeleteCaptureButton id={c.id} />
+              <div className="aspect-square w-full overflow-hidden rounded bg-gray-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/captures/${c.storagePath}`}
+                  alt={c.kind}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="mt-2 text-xs font-mono text-gray-500">{c.storagePath}</div>
+              <div className="text-xs text-gray-400">{c.kind}</div>
             </li>
           ))}
         </ul>
