@@ -8,6 +8,11 @@ type SearchParams = {
   status?: string;
 };
 
+// ビルド時のDB接続を避けるため、動的レンダリングを強制
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 export default async function ItemsPage({ searchParams }: { searchParams: SearchParams }) {
   const db = getDb();
   const q = (searchParams.q || '').trim();
@@ -88,4 +93,3 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
     </div>
   );
 }
-
