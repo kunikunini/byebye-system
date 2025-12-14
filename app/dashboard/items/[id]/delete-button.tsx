@@ -48,7 +48,7 @@ export default function DeleteItemButton({ id }: { id: string }) {
             <button
                 onClick={() => setIsOpen(true)}
                 type="button"
-                className="rounded bg-gray-100 px-4 py-2 font-medium text-red-600 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-red-50 hover:shadow-lg active:scale-95"
+                className="rounded bg-gray-100 px-4 py-2 font-medium text-red-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-50 hover:shadow-xl active:scale-95"
             >
                 この商品を削除
             </button>
