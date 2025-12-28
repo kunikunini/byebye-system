@@ -7,6 +7,7 @@ import { eq, desc } from 'drizzle-orm';
 import DeleteCaptureButton from './delete-capture-button';
 import UploadForm from './upload-form';
 import ItemEditForm from './edit-form';
+import WorkNavigation from './work-navigation';
 
 export default async function ItemDetail({ params }: { params: { id: string } }) {
   const db = getDb();
@@ -26,6 +27,8 @@ export default async function ItemDetail({ params }: { params: { id: string } })
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{item.sku}</h1>
       </div>
+
+      <WorkNavigation item={item} captures={caps} />
 
       <ItemEditForm item={item} />
 
@@ -55,7 +58,7 @@ export default async function ItemDetail({ params }: { params: { id: string } })
           ))}
         </ul>
       </section>
-    </div>
+    </div >
   );
 }
 

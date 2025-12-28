@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/src/lib/supabase';
 import { getDb } from '@/db/client';
 import { captures, items } from '@/db/schema';
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest) {
     uploaded.push(filename);
   }
 
-  // return Response.json({ ok: true, uploaded });
+  revalidatePath('/dashboard/items');
+  revalidatePath(`/dashboard/items/${itemId}`);
   return Response.redirect(new URL(`/dashboard/items/${itemId}`, req.url), 303);
 }
 

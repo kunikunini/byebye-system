@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable, text, timestamp, uuid, jsonb } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const itemTypeEnum = pgEnum('item_type', ['VINYL', 'CD', 'BOOK']);
@@ -40,3 +40,11 @@ export const captures = pgTable('captures', {
   createdAt: timestamp('created_at', { withTimezone: false }).defaultNow(),
 });
 
+export const saved_views = pgTable('saved_views', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  name: text('name').notNull(),
+  filters: jsonb('filters').notNull(),
+  sort: jsonb('sort'),
+  createdAt: timestamp('created_at', { withTimezone: false }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).defaultNow(),
+});
