@@ -10,6 +10,7 @@ import { ItemsSelectionProvider } from './items-selection-context';
 import ItemCheckbox from './item-checkbox';
 import ItemsTableSelectAll from './items-table-select-all';
 import BatchActionBar from './batch-action-bar';
+import SaveViewModal from './save-view-modal';
 
 type SearchParams = {
   q?: string;
@@ -29,6 +30,7 @@ const TARGET_CAPTURES = { VINYL: 5, CD: 4, BOOK: 5 } as const;
 
 type ItemWithCounts = typeof items.$inferSelect & {
   capturesCount: number;
+  frontThumb: string | null;
 };
 
 function getInfoFilledCount(item: typeof items.$inferSelect) {
@@ -75,17 +77,23 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
   if (q) {
     const p = `%${q}%`;
     conds.push(
-      or(ilike(items.sku, p), ilike(items.title, p), ilike(items.artist, p))
+      or(
+        ilike(items.sku, p),
+        ilike(items.title, p),
+        ilike(items.artist, p),
+        ilike(items.catalogNo, p)
+      )
     );
   }
   if (status) conds.push(eq(items.status, status as any));
   if (type) conds.push(eq(items.itemType, type as any));
 
-  // Select with subquery for captures count
+  // Select with subquery for captures count and front thumbnail
   const rows = await db
     .select({
       ...getTableColumns(items),
-      capturesCount: sql<number>`(SELECT count(*)::int FROM captures WHERE captures.item_id = items.id)`.mapWith(Number)
+      capturesCount: sql<number>`(SELECT count(*)::int FROM captures WHERE captures.item_id = items.id)`.mapWith(Number),
+      frontThumb: sql<string | null>`(SELECT storage_path FROM captures WHERE captures.item_id = items.id AND captures.kind = 'front' LIMIT 1)`
     })
     .from(items)
     .where(conds.length ? and(...conds) : undefined)
@@ -127,7 +135,7 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
           <input
             type="text"
             name="q"
-            placeholder="sku / title / artist"
+            placeholder="sku / title / artist / catalog_no"
             defaultValue={q}
             className="w-64 rounded border border-gray-200 bg-white px-3 py-2 text-text-primary placeholder-text-muted focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2 shadow-sm"
           />
@@ -158,6 +166,8 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
           >
             検索
           </button>
+          <div className="h-8 w-px bg-gray-200 mx-1 self-center hidden sm:block"></div>
+          <SaveViewModal />
         </form>
 
         <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
@@ -167,7 +177,9 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
                 <th className="px-4 py-3 text-center w-10">
                   <ItemsTableSelectAll ids={rows.map(r => r.id)} />
                 </th>
+                <th className="px-4 py-3">Jacket</th>
                 <th className="px-4 py-3">SKU</th>
+                <th className="px-4 py-3">Catalog No</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">作業状態</th>
                 <th className="px-4 py-3">進捗</th>
@@ -191,10 +203,22 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
                     <td className="px-4 py-3 text-center w-10 relative z-20">
                       <ItemCheckbox id={r.id} />
                     </td>
+                    <td className="px-4 py-3 relative z-20">
+                      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-gray-100 border border-gray-200">
+                        {r.frontThumb ? (
+                          <img src={r.frontThumb} className="h-full w-full object-cover" alt="" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-300 bg-gray-50">
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     <td className="group relative px-4 py-3 font-mono font-medium text-text-primary">
                       <Link href={`/dashboard/items/${r.id}`} className="block w-full h-full absolute inset-0 z-10"></Link>
                       <span className="relative z-20 text-blue-600 underline decoration-blue-300 underline-offset-4 hover:decoration-blue-500">{r.sku}</span>
                     </td>
+                    <td className="px-4 py-3 text-text-primary whitespace-nowrap relative z-20 font-bold">{r.catalogNo || '-'}</td>
                     <td className="px-4 py-3 text-text-secondary relative z-20">{r.itemType}</td>
                     <td className="px-4 py-3 relative z-20">
                       <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap ${humanStatus.color}`}>

@@ -3,10 +3,12 @@
 import { useItemsSelection } from './items-selection-context';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import BatchDiscogsModal from './batch-discogs-modal';
 
 export default function BatchActionBar() {
     const { selectedIds, clearSelection } = useItemsSelection();
     const [loading, setLoading] = useState(false);
+    const [showDiscogsModal, setShowDiscogsModal] = useState(false);
     const router = useRouter();
 
     if (selectedIds.length === 0) return null;
@@ -27,10 +29,34 @@ export default function BatchActionBar() {
                 clearSelection();
                 router.refresh();
             } else {
-                alert('エラーが発生しました');
+                alert('ステータスの更新に失敗しました');
             }
         } catch (e) {
-            alert('エラーが発生しました');
+            alert('通信エラーが発生しました');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm(`選択された ${selectedIds.length} 件を完全に削除しますか？\nこの操作は取り消せません。`)) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch('/api/items/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds, action: 'delete' }),
+            });
+
+            if (res.ok) {
+                clearSelection();
+                router.refresh();
+            } else {
+                alert('削除に失敗しました');
+            }
+        } catch (e) {
+            alert('通信エラーが発生しました');
         } finally {
             setLoading(false);
         }
@@ -66,44 +92,88 @@ export default function BatchActionBar() {
     };
 
     return (
-        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-xl animate-in fade-in slide-in-from-bottom-4">
-            <div className="text-sm font-bold text-gray-900">
-                {selectedIds.length} <span className="font-normal text-gray-500">selected</span>
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-gray-200 bg-white/90 p-4 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[10px] font-bold text-white">
+                    {selectedIds.length}
+                </span>
+                <span className="text-sm font-bold text-gray-900">selected</span>
             </div>
 
             <div className="h-6 w-px bg-gray-200"></div>
 
             <div className="flex items-center gap-2">
-                <select
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="rounded border border-gray-300 px-3 py-1.5 text-sm"
-                    value=""
+                {/* Quick Status Actions */}
+                <button
+                    onClick={() => handleStatusChange('READY')}
                     disabled={loading}
+                    className="flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-100 disabled:opacity-50 transition-all active:scale-95"
+                    title="準備完了にする"
                 >
-                    <option value="" disabled>ステータス変更...</option>
-                    <option value="UNPROCESSED">UNPROCESSED</option>
-                    <option value="IDENTIFIED">IDENTIFIED</option>
-                    <option value="READY">READY</option>
-                    <option value="LISTED">LISTED</option>
-                    <option value="SOLD">SOLD</option>
-                </select>
+                    🟢 READY
+                </button>
+                <button
+                    onClick={() => handleStatusChange('LISTED')}
+                    disabled={loading}
+                    className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-all active:scale-95"
+                    title="出品済みにする"
+                >
+                    🔵 LISTED
+                </button>
+
+                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
+                {/* Batch Discogs Search */}
+                <button
+                    onClick={() => setShowDiscogsModal(true)}
+                    disabled={loading}
+                    className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-all active:scale-95"
+                >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <span>Discogs一括検索</span>
+                </button>
 
                 <button
                     onClick={handleExport}
                     disabled={loading}
-                    className="rounded border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm font-medium hover:bg-gray-100"
+                    className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all active:scale-95"
                 >
-                    ⬇ CSV
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    <span>CSV</span>
+                </button>
+
+                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
+                <button
+                    onClick={handleDelete}
+                    disabled={loading}
+                    className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50 transition-all active:scale-95"
+                >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <span>削除</span>
                 </button>
             </div>
 
             <button
                 onClick={clearSelection}
-                className="ml-2 text-xs text-gray-400 hover:text-gray-600"
+                className="ml-2 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                 disabled={loading}
+                title="選択解除"
             >
-                ✕ 解除
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
+
+            {showDiscogsModal && (
+                <BatchDiscogsModal
+                    selectedIds={selectedIds}
+                    onClose={() => setShowDiscogsModal(false)}
+                    onComplete={() => {
+                        setShowDiscogsModal(false);
+                        clearSelection();
+                        router.refresh();
+                    }}
+                />
+            )}
         </div>
     );
 }
