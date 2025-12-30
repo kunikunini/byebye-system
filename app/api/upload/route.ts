@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
 
   revalidatePath('/dashboard/items');
   revalidatePath(`/dashboard/items/${itemId}`);
-  return Response.redirect(new URL(`/dashboard/items/${itemId}`, req.url), 303);
+
+  return Response.json({ success: true, itemId, files: uploaded });
 }
 

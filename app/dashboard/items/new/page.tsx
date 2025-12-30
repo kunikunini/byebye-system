@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function NewItemPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -16,19 +17,17 @@ export default function NewItemPage() {
       const res = await fetch('/api/items', {
         method: 'POST',
         body: formData,
-        redirect: 'manual'
       });
 
-      if (res.status === 303 || res.status === 302 || res.status === 201) {
-        const location = res.headers.get('Location');
-        if (location) {
-          router.push(location as any);
-        } else {
-          // Fallback if no location header (though API adds it)
-          router.push('/dashboard/items' as any);
-        }
+      const data = await res.json();
+
+      if (data.success) {
+        setShowSuccess(true);
+        // Delay redirect to show success message
+        setTimeout(() => {
+          router.push(data.location as any);
+        }, 1200);
       } else {
-        const data = await res.json();
         alert(data.error || '登録に失敗しました');
         setIsLoading(false);
       }
@@ -39,7 +38,25 @@ export default function NewItemPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {/* Success Overlay */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/50 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="rounded-2xl bg-black/95 px-10 py-8 text-white shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-2 text-black animate-bounce">
+                <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold tracking-tight">登録完了！</p>
+                <p className="text-sm text-gray-400">詳細画面へ移動します</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <h1 className="text-xl font-semibold text-text-primary">新規登録</h1>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>

@@ -26,10 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   await db.update(items).set(payload).where(eq(items.id, id));
 
-  return new Response(null, {
-    status: 303,
-    headers: { Location: `/dashboard/items/${id}` },
-  });
+  return Response.json({ success: true, id });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {

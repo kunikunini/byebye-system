@@ -32,9 +32,6 @@ export async function POST(req: NextRequest) {
     .values({ sku, itemType, status: 'UNPROCESSED' as any })
     .returning({ id: items.id });
 
-  return new Response(null, {
-    status: 303,
-    headers: { Location: `/dashboard/items/${created.id}` },
-  });
+  return Response.json({ success: true, id: created.id, location: `/dashboard/items/${created.id}` });
 }
 
