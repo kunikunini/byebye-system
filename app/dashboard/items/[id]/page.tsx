@@ -30,33 +30,42 @@ export default async function ItemDetail({ params }: { params: { id: string } })
 
       <WorkNavigation item={item} captures={caps} />
 
-      <ItemEditForm item={item} />
-
-      {/* 旧配置削除 */}
-
-
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">画像アップロード</h2>
+      <section className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[10px] text-white">1</span>
+          <h2 className="text-lg font-bold text-gray-900 font-outfit">画像アップロード</h2>
+        </div>
         <UploadForm itemId={id} />
 
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {caps.map((c) => (
-            <li key={c.id} className="relative rounded border p-2 text-sm">
-              <DeleteCaptureButton id={c.id} />
-              <div className="aspect-square w-full overflow-hidden rounded bg-gray-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/captures/${c.storagePath}`}
-                  alt={c.kind}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="mt-2 text-xs font-mono text-gray-500">{c.storagePath}</div>
-              <div className="text-xs text-gray-400">{c.kind}</div>
-            </li>
-          ))}
-        </ul>
+        {caps.length > 0 && (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4 pt-2">
+            {caps.map((c) => (
+              <li key={c.id} className="group relative rounded-2xl border border-gray-100 bg-gray-50/30 p-2 transition-all hover:border-gold-2/30 hover:shadow-lg hover:shadow-gold-2/5">
+                <DeleteCaptureButton id={c.id} />
+                <div className="aspect-square w-full overflow-hidden rounded-xl bg-gray-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/captures/${c.storagePath}`}
+                    alt={c.kind}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                </div>
+                <div className="mt-2 flex flex-col gap-0.5 px-1">
+                  <div className="text-[10px] font-mono font-medium text-gray-400 truncate">{c.storagePath}</div>
+                  <div className="text-[10px] font-bold text-gold-5 uppercase tracking-wider">{c.kind}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[10px] text-white">2</span>
+          <h2 className="text-lg font-bold text-gray-900 font-outfit">アイテム情報・相場分析</h2>
+        </div>
+        <ItemEditForm item={item} />
       </section>
     </div >
   );
