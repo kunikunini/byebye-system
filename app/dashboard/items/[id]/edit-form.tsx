@@ -37,6 +37,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [priceSuggestions, setPriceSuggestions] = useState<any | null>(null);
     const [isFetchingPrice, setIsFetchingPrice] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
+    const [toastMessage, setToastMessage] = useState('完了しました');
 
     const handleClearAll = () => {
         setIsClearing(true);
@@ -72,6 +73,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
             if (data.catalogNo) setCatalogNo(data.catalogNo);
 
             // Success toast for AI
+            setToastMessage('情報を抽出しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
         } catch (error) {
@@ -132,6 +134,8 @@ export default function ItemEditForm({ item }: { item: Item }) {
             const res = await fetch(`/api/discogs/price?releaseId=${selectedReleaseId}`);
             const data = await res.json();
 
+            console.log('Price suggestions data:', data);
+
             if (data.error) {
                 if (data.error === 'no_suggestions') {
                     alert('このリリースの相場データが見つかりませんでした');
@@ -141,8 +145,19 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 return;
             }
 
+            if (!data || Object.keys(data).length === 0) {
+                alert('相場データの中身が空でした');
+                return;
+            }
+
             setPriceSuggestions(data);
+
+            // New dedicated toast message for price suggestions
+            setToastMessage('価格情報を取得しました');
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
         } catch (error) {
+            console.error('Price fetch error:', error);
             alert('通信エラーが発生しました');
         } finally {
             setIsFetchingPrice(false);
@@ -162,6 +177,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
             if (!res.ok) throw new Error('Failed to save');
 
+            setToastMessage('保存完了しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
 
@@ -186,8 +202,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                 </svg>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-xl font-bold tracking-tight">完了しました</p>
-                                <p className="text-sm text-gray-400">最新の情報が保存されました</p>
+                                <p className="text-xl font-bold tracking-tight">{toastMessage}</p>
                             </div>
                         </div>
                     </div>
@@ -307,15 +322,21 @@ export default function ItemEditForm({ item }: { item: Item }) {
                         <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="rounded-lg bg-gray-50 p-2">
                                 <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Low</div>
-                                <div className="text-sm font-mono font-bold text-gray-900">${priceSuggestions['Good (G)']?.value?.toFixed(2) || '-'}</div>
+                                <div className="text-sm font-mono font-bold text-gray-900">
+                                    ${(priceSuggestions['Very Good (VG)']?.value || priceSuggestions['Good (G)']?.value || 0).toFixed(2)}
+                                </div>
                             </div>
                             <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
                                 <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Med</div>
-                                <div className="text-sm font-mono font-bold text-gold-4">${priceSuggestions['Very Good Plus (VG+)']?.value?.toFixed(2) || '-'}</div>
+                                <div className="text-sm font-mono font-bold text-gold-4">
+                                    ${(priceSuggestions['Very Good Plus (VG+)']?.value || priceSuggestions['Near Mint (NM or M-)']?.value || 0).toFixed(2)}
+                                </div>
                             </div>
                             <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
                                 <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">High</div>
-                                <div className="text-sm font-mono font-bold text-blue-600">${priceSuggestions['Mint (M)']?.value?.toFixed(2) || '-'}</div>
+                                <div className="text-sm font-mono font-bold text-blue-600">
+                                    ${(priceSuggestions['Mint (M)']?.value || priceSuggestions['Near Mint (NM or M-)']?.value || 0).toFixed(2)}
+                                </div>
                             </div>
                         </div>
                     ) : (
