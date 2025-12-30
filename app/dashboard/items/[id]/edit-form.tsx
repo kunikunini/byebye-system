@@ -147,7 +147,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
             setPriceSuggestions(data);
 
-            setToastMessage(data.type === 'suggestions' ? '推奨価格を取得しました' : '市場統計を取得しました');
+            setToastMessage('最新の市場データを取得しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2000);
         } catch (error) {
@@ -290,7 +290,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-2">
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold-2 text-[12px] font-black text-black">¥</div>
-                            <span className="text-base font-bold text-gray-900 font-outfit">相場分析 (Market Analysis)</span>
+                            <span className="text-base font-bold text-gray-900 font-outfit">市場データ分析 (Market Data)</span>
                         </div>
                         <div className="flex gap-2">
                             {priceSuggestions?.releaseId && (
@@ -363,7 +363,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                 <div className="flex items-center justify-between mb-4 px-1">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
-                                            {priceSuggestions.type === 'suggestions' ? 'Seller Price Suggestions' : 'Historical Market Prices'}
+                                            {priceSuggestions.type === 'suggestions' ? 'Seller Price Suggestions' : 'Historical Market Statistics'}
                                         </span>
                                         <span className="text-[9px] text-gray-400 font-bold">
                                             {priceSuggestions.type === 'suggestions' ? '（コンディション別出品推奨価格）' : '（過去の市場取引統計データ）'}
@@ -408,11 +408,23 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                             } else if (curr) {
                                                 displayVal = `${curr} ${val.toLocaleString()}`;
                                             } else {
-                                                displayVal = val.toLocaleString();
+                                                // If currency is missing but it's a number, apply smart detection
+                                                if (val > 1000) {
+                                                    displayVal = `¥${Math.round(val).toLocaleString()}`;
+                                                } else {
+                                                    displayVal = val.toLocaleString();
+                                                }
                                             }
                                         } else if (typeof priceObj === 'number' && priceObj > 0) {
-                                            // Handle cases where API might just return a number (likely USD)
-                                            displayVal = `¥${Math.round(priceObj * 150).toLocaleString()}`;
+                                            // Handle cases where API returns just a number
+                                            // SMART DETECTION: If > 500, it's likely JPY already.
+                                            if (priceObj > 500) {
+                                                displayVal = `¥${Math.round(priceObj).toLocaleString()}`;
+                                            } else {
+                                                // Small number, likely USD
+                                                displayVal = `¥${Math.round(priceObj * 150).toLocaleString()}`;
+                                                originalLabel = `$${priceObj.toFixed(2)}`;
+                                            }
                                         }
 
                                         return (
@@ -426,21 +438,26 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                         );
                                     })}
                                 </div>
+                                {priceSuggestions.type === 'stats' && !priceSuggestions.stats?.median && !priceSuggestions.data?.median && (
+                                    <p className="mt-4 text-[9px] text-center text-gray-400 font-medium">
+                                        ※ 現在統計データが「最安値」のみ提供されているため、中央値・高値は表示されていません。
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-between text-[9px] px-1">
-                                <div className="text-gray-400 font-medium">
-                                    ※ USD表示のデータは 1ドル=150円 で換算しています。
+                                <div className="text-gray-400 font-medium italic">
+                                    ※ USD表示のデータは 1ドル=150円 で換算。500以上の数値は円貨として扱っています。
                                 </div>
                                 <details className="group relative">
                                     <summary className="cursor-pointer text-gray-300 uppercase tracking-tighter list-none hover:text-gray-500 flex items-center gap-1">
-                                        <span>Show Raw API Data</span>
+                                        <span>Raw API Data (Debug)</span>
                                         <svg className="w-2.5 h-2.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                                     </summary>
                                     <div className="absolute right-0 bottom-full mb-3 z-[60] animate-in slide-in-from-bottom-2 fade-in duration-200">
                                         <div className="max-h-64 w-[320px] overflow-hidden rounded-2xl bg-black/95 shadow-2xl backdrop-blur-xl border border-white/10 ring-1 ring-black">
                                             <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
-                                                <span className="text-white font-black uppercase tracking-widest text-[8px]">Discogs API Raw Data</span>
+                                                <span className="text-white font-black uppercase tracking-widest text-[8px]">Discogs API Response</span>
                                                 <span className="text-[10px] font-mono text-green-400">JSON</span>
                                             </div>
                                             <pre className="p-4 overflow-auto max-h-[220px] text-[10px] font-mono text-green-400 scrollbar-thin scrollbar-thumb-white/10">
