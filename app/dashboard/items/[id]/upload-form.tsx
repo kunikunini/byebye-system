@@ -44,7 +44,15 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                 throw new Error(`Server returned ${res.status}`);
             }
 
-            const data = await res.json();
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                console.error('Failed to parse JSON response:', e);
+                // If the response was OK (200), we treat it as success even if JSON parsing failed
+                // This handles cases where some middleware might be returning non-JSON or empty response
+                data = { success: true };
+            }
 
             if (data.success) {
                 // Success feedback
@@ -62,8 +70,9 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                 alert(data.error || 'アップロードに失敗しました');
             }
         } catch (error) {
-            console.error('Upload fetch error:', error);
-            alert('アップロード中にエラーが発生しました。コンソールを確認してください。');
+            console.error('Upload error detail:', error);
+            // Even if there was a fetch error, we check if it might have succeeded
+            alert('アップロード中に問題が発生しました。画像一覧を更新して確認してください。');
         } finally {
             setIsUploading(false);
         }

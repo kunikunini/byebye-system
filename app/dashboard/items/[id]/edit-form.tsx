@@ -364,7 +364,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                         href="/dashboard/items"
                         className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
                     >
-                        一覧へ戻る
+                        一覧へ
                     </Link>
                     <button
                         className="rounded-xl bg-black px-8 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100"
@@ -381,9 +381,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
                                 <span>保存する</span>
                             </div>
                         )}
