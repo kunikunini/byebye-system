@@ -34,9 +34,13 @@ export async function POST(req: NextRequest) {
     uploaded.push(filename);
   }
 
-  revalidatePath('/dashboard/items');
-  revalidatePath(`/dashboard/items/${itemId}`);
+  try {
+    revalidatePath('/dashboard/items');
+    revalidatePath(`/dashboard/items/${itemId}`);
+  } catch (e) {
+    console.error('Revalidation error:', e);
+  }
 
   return Response.json({ success: true, itemId, files: uploaded });
 }
-
+```

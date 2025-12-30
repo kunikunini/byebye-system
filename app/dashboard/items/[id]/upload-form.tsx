@@ -38,7 +38,12 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                 body: formData,
             });
 
-            // Even if it was redirected before, it should now return JSON
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('Upload server error:', res.status, errorText);
+                throw new Error(`Server returned ${res.status}`);
+            }
+
             const data = await res.json();
 
             if (data.success) {
@@ -57,8 +62,8 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                 alert(data.error || 'アップロードに失敗しました');
             }
         } catch (error) {
-            console.error('Upload error:', error);
-            alert('アップロード中に通信エラーが発生しました');
+            console.error('Upload fetch error:', error);
+            alert('アップロード中にエラーが発生しました。コンソールを確認してください。');
         } finally {
             setIsUploading(false);
         }

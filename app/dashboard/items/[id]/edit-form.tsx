@@ -36,6 +36,17 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
     const [priceSuggestions, setPriceSuggestions] = useState<any | null>(null);
     const [isFetchingPrice, setIsFetchingPrice] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
+
+    const handleClearAll = () => {
+        setIsClearing(true);
+        setTitle('');
+        setArtist('');
+        setCatalogNo('');
+        setSelectedReleaseId(null);
+        setPriceSuggestions(null);
+        setTimeout(() => setIsClearing(false), 500);
+    };
 
     const handleAIAnalyze = async () => {
         setIsAnalyzing(true);
@@ -206,6 +217,16 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             <span>画像から情報を抽出</span>
                         </>
                     )}
+                </button>
+                <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm transition-all hover:bg-gray-50 active:scale-95"
+                >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>入力をクリア</span>
                 </button>
             </div>
 
