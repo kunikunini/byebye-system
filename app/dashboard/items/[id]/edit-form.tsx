@@ -164,14 +164,21 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
     return (
         <>
-            {/* Toast Notification (Fixed Position) */}
+            {/* Toast Notification (Center Overlay) */}
             {showToast && (
-                <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2 transform rounded-full bg-black/90 px-6 py-3 text-white shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="flex items-center gap-2">
-                        <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="font-medium">完了!</span>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+                    <div className="rounded-2xl bg-black/90 px-8 py-5 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md animate-in zoom-in-95 fade-in duration-300">
+                        <div className="flex flex-col items-center gap-3 text-center">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gold-2 text-black">
+                                <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-xl font-bold tracking-tight">完了しました</p>
+                                <p className="text-sm text-gray-400">最新の情報が保存されました</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
