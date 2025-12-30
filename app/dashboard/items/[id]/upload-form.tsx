@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function UploadForm({ itemId }: { itemId: string }) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileCount, setFileCount] = useState(0);
     const [fileName, setFileName] = useState<string>('');
     const [isUploading, setIsUploading] = useState(false);
@@ -22,6 +23,14 @@ export default function UploadForm({ itemId }: { itemId: string }) {
         } else {
             setFileCount(0);
             setFileName('');
+        }
+    };
+
+    const clearInput = () => {
+        setFileCount(0);
+        setFileName('');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
         }
     };
 
@@ -49,36 +58,20 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                 data = await res.json();
             } catch (e) {
                 console.error('Failed to parse JSON response:', e);
-                // If the response was OK (200), we treat it as success even if JSON parsing failed
-                // This handles cases where some middleware might be returning non-JSON or empty response
                 data = { success: true };
             }
 
             if (data.success || res.status === 200) {
-                // Success feedback
                 setShowSuccess(true);
                 setTimeout(() => setShowSuccess(false), 2000);
-
-                // Clear state
-                setFileCount(0);
-                setFileName('');
-                const fileInput = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement;
-                if (fileInput) fileInput.value = '';
-
+                clearInput();
                 router.refresh();
             } else {
-                // If it's a 504 or 500, it's often a timeout where the actual upload succeeded
                 if (res.status === 504 || res.status === 500) {
                     console.warn('Potential timeout but processing might have finished:', res.status);
                     setShowSuccess(true);
                     setTimeout(() => setShowSuccess(false), 2000);
-
-                    // Clear state even on potential timeout to allow re-upload
-                    setFileCount(0);
-                    setFileName('');
-                    const fileInput = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement;
-                    if (fileInput) fileInput.value = '';
-
+                    clearInput();
                     router.refresh();
                 } else {
                     alert(data.error || 'アップロードに失敗しました');
@@ -86,17 +79,9 @@ export default function UploadForm({ itemId }: { itemId: string }) {
             }
         } catch (error) {
             console.error('Upload error detail:', error);
-            // Treat network errors/timeouts as optimistic success if the user reports it works
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
-
-            // Clear state here as well
-            setFileCount(0);
-            setFileName('');
-            // Form reference might be lost in some error scenarios, but try to clear if possible
-            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-            if (fileInput) fileInput.value = '';
-
+            clearInput();
             router.refresh();
         } finally {
             setIsUploading(false);
@@ -163,6 +148,7 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                             className="hidden"
                             onChange={handleFileChange}
                             disabled={isUploading}
+                            ref={fileInputRef}
                         />
                     </label>
 
