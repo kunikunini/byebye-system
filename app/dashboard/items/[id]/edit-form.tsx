@@ -358,49 +358,56 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                                         {priceSuggestions.type === 'suggestions' ? 'Market Suggestions (推奨価格)' : 'Sales History (販売統計)'}
                                     </span>
-                                    {priceSuggestions.stats?.last_sold && (
+                                    {/* Get last sold date from stats if available */}
+                                    {(priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold) && (
                                         <div className="text-[10px] text-gray-400 font-medium">
-                                            最新の販売: <span className="text-gray-900">{priceSuggestions.stats.last_sold}</span>
+                                            最新の販売: <span className="text-gray-900">{priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold}</span>
                                         </div>
                                     )}
                                 </div>
                                 <div className="grid grid-cols-3 gap-3 text-center">
-                                    <div className="space-y-1">
-                                        <div className="text-[10px] font-bold text-gray-500">低</div>
-                                        <div className="text-base font-black text-gray-900">
-                                            {priceSuggestions.type === 'suggestions'
-                                                ? (priceSuggestions.data['Very Good (VG)']?.value ? `¥${Math.round(priceSuggestions.data['Very Good (VG)'].value * 150).toLocaleString()}` : '-')
-                                                : (priceSuggestions.stats?.lowest_price?.value ? `¥${Math.round(priceSuggestions.stats.lowest_price.value * 150).toLocaleString()}` : '-')
-                                            }
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1 border-x border-gray-100">
-                                        <div className="text-[10px] font-bold text-gold-5">中間点</div>
-                                        <div className="text-base font-black text-gold-5">
-                                            {priceSuggestions.type === 'suggestions'
-                                                ? (priceSuggestions.data['Very Good Plus (VG+)']?.value ? `¥${Math.round(priceSuggestions.data['Very Good Plus (VG+)'].value * 150).toLocaleString()}` : '-')
-                                                : (priceSuggestions.stats?.median?.value ? `¥${Math.round(priceSuggestions.stats.median.value * 150).toLocaleString()}` : '-')
-                                            }
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="text-[10px] font-bold text-blue-600">高</div>
-                                        <div className="text-base font-black text-blue-600">
-                                            {priceSuggestions.type === 'suggestions'
-                                                ? (priceSuggestions.data['Mint (M)']?.value ? `¥${Math.round(priceSuggestions.data['Mint (M)'].value * 150).toLocaleString()}` : '-')
-                                                : (priceSuggestions.stats?.highest_price?.value ? `¥${Math.round(priceSuggestions.stats.highest_price.value * 150).toLocaleString()}` : '-')
-                                            }
-                                        </div>
-                                    </div>
+                                    {/* Price Card Helper */}
+                                    {[
+                                        { label: '低', key: 'low' },
+                                        { label: '中間点', key: 'med' },
+                                        { label: '高', key: 'high' }
+                                    ].map((p) => {
+                                        let displayVal = '-';
+                                        let priceObj = null;
+
+                                        if (priceSuggestions.type === 'suggestions') {
+                                            const map = { low: 'Very Good (VG)', med: 'Very Good Plus (VG+)', high: 'Mint (M)' };
+                                            priceObj = priceSuggestions.data[map[p.key as keyof typeof map]];
+                                        } else {
+                                            const map = { low: 'lowest_price', med: 'median', high: 'highest_price' };
+                                            priceObj = priceSuggestions.stats?.[map[p.key as keyof typeof map]] || priceSuggestions.data?.[map[p.key as keyof typeof map]];
+                                        }
+
+                                        if (priceObj && typeof priceObj === 'object' && priceObj.value) {
+                                            const val = priceObj.value;
+                                            const isJPY = priceObj.currency === 'JPY' || priceObj.currency === '円';
+                                            displayVal = isJPY ? `¥${Math.round(val).toLocaleString()}` : `¥${Math.round(val * 150).toLocaleString()}`;
+                                        } else if (typeof priceObj === 'number') {
+                                            displayVal = `¥${Math.round(priceObj * 150).toLocaleString()}`;
+                                        }
+
+                                        return (
+                                            <div key={p.key} className={`space-y-1 ${p.key === 'med' ? 'border-x border-gray-100' : ''}`}>
+                                                <div className={`text-[10px] font-bold ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-500'}`}>{p.label}</div>
+                                                <div className={`text-base font-black ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-900'}`}>{displayVal}</div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between text-[9px] px-1">
                                 <div className="text-gray-400 font-medium">
-                                    ※ 1ドル = 150円で概算しています。
+                                    {/* Show notice if conversion happened */}
+                                    ※ 金額は状況により円貨またはドル貨からの概算を表示しています。
                                 </div>
                                 <div className="text-gray-300 uppercase tracking-tighter">
-                                    Discogs API Data • {new Date().toLocaleDateString()}
+                                    Discogs Statistics API • {new Date().toLocaleDateString()}
                                 </div>
                             </div>
                         </div>
