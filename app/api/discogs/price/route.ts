@@ -25,12 +25,12 @@ export async function GET(req: NextRequest) {
 
         if (sRes.ok) {
             const data = await sRes.json();
-            return Response.json({ type: 'suggestions', data });
+            return Response.json({ type: 'suggestions', data, releaseId });
         }
 
         // Fallback to release stats if suggestions are 404 or other errors
         console.log(`Suggestions not found for ${releaseId}, trying stats fallback...`);
-        const statsUrl = `https://api.discogs.com/releases/${releaseId}/stats`;
+        const statsUrl = `https://api.discogs.com/releases/${releaseId}`;
         const stRes = await fetch(statsUrl, {
             headers: {
                 'Authorization': `Discogs token=${token}`,
@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
         });
 
         if (stRes.ok) {
-            const statsData = await stRes.json();
-            return Response.json({ type: 'stats', data: statsData });
+            const releaseData = await stRes.json();
+            return Response.json({ type: 'stats', data: releaseData, releaseId });
         }
 
         return Response.json({ error: 'no_data_available' }, { status: 404 });
