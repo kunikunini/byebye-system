@@ -43,4 +43,3 @@ export async function POST(req: NextRequest) {
 
   return Response.json({ success: true, itemId, files: uploaded });
 }
-```
