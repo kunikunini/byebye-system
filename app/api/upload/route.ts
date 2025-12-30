@@ -18,28 +18,36 @@ export async function POST(req: NextRequest) {
   if (!item) return Response.json({ error: 'not_found' }, { status: 404 });
 
   const supa = getSupabaseAdmin();
-  const uploaded: string[] = [];
 
-  for (const f of files) {
-    // Append timestamp to prevent overwrite and caching issues
-    const filename = `${item.sku}_${kind}_${Date.now()}.jpg`;
-    const array = new Uint8Array(await f.arrayBuffer());
-    const { error } = await supa.storage.from('captures').upload(filename, array, {
-      contentType: 'image/jpeg',
-      upsert: false, // uniqueness guaranteed by timestamp
-    });
-    if (error) return Response.json({ error: error.message }, { status: 500 });
-
-    await db.insert(captures).values({ itemId, kind, storagePath: filename });
-    uploaded.push(filename);
-  }
-
+  // Use Promise.all for concurrent uploads to significantly speed up processing and prevent timeouts
   try {
-    revalidatePath('/dashboard/items');
-    revalidatePath(`/dashboard/items/${itemId}`);
-  } catch (e) {
-    console.error('Revalidation error:', e);
-  }
+    const results = await Promise.all(files.map(async (f, index) => {
+      // Append index to timestamp for absolute uniqueness in parallel processing
+      const filename = `${item.sku}_${kind}_${Date.now()}_${index}.jpg`;
+      const arrayBuffer = await f.arrayBuffer();
+      const array = new Uint8Array(arrayBuffer);
 
-  return Response.json({ success: true, itemId, files: uploaded });
+      const { error } = await supa.storage.from('captures').upload(filename, array, {
+        contentType: 'image/jpeg',
+        upsert: false,
+      });
+
+      if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+
+      await db.insert(captures).values({ itemId, kind, storagePath: filename });
+      return filename;
+    }));
+
+    try {
+      revalidatePath('/dashboard/items');
+      revalidatePath(`/dashboard/items/${itemId}`);
+    } catch (e) {
+      console.error('Revalidation error:', e);
+    }
+
+    return Response.json({ success: true, itemId, files: results });
+  } catch (err: any) {
+    console.error('Parallel upload error:', err);
+    return Response.json({ success: false, error: err.message }, { status: 500 });
+  }
 }
