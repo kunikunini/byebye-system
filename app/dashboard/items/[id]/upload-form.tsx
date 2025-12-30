@@ -72,6 +72,13 @@ export default function UploadForm({ itemId }: { itemId: string }) {
                     console.warn('Potential timeout but processing might have finished:', res.status);
                     setShowSuccess(true);
                     setTimeout(() => setShowSuccess(false), 2000);
+
+                    // Clear state even on potential timeout to allow re-upload
+                    setFileCount(0);
+                    setFileName('');
+                    const fileInput = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement;
+                    if (fileInput) fileInput.value = '';
+
                     router.refresh();
                 } else {
                     alert(data.error || 'アップロードに失敗しました');
@@ -82,6 +89,14 @@ export default function UploadForm({ itemId }: { itemId: string }) {
             // Treat network errors/timeouts as optimistic success if the user reports it works
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
+
+            // Clear state here as well
+            setFileCount(0);
+            setFileName('');
+            // Form reference might be lost in some error scenarios, but try to clear if possible
+            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+
             router.refresh();
         } finally {
             setIsUploading(false);
