@@ -403,12 +403,16 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
                             <div className="flex items-center justify-between text-[9px] px-1">
                                 <div className="text-gray-400 font-medium">
-                                    {/* Show notice if conversion happened */}
                                     ※ 金額は状況により円貨またはドル貨からの概算を表示しています。
                                 </div>
-                                <div className="text-gray-300 uppercase tracking-tighter">
-                                    Discogs Statistics API • {new Date().toLocaleDateString()}
-                                </div>
+                                <details className="group">
+                                    <summary className="cursor-pointer text-gray-300 uppercase tracking-tighter list-none hover:text-gray-500">
+                                        Debug Data [+]
+                                    </summary>
+                                    <pre className="absolute right-0 bottom-full mb-2 max-h-40 w-64 overflow-auto rounded-lg bg-black p-2 text-[8px] text-green-400 shadow-xl">
+                                        {JSON.stringify(priceSuggestions, null, 2)}
+                                    </pre>
+                                </details>
                             </div>
                         </div>
                     ) : (
