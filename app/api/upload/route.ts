@@ -38,13 +38,8 @@ export async function POST(req: NextRequest) {
       return filename;
     }));
 
-    try {
-      revalidatePath('/dashboard/items');
-      revalidatePath(`/dashboard/items/${itemId}`);
-    } catch (e) {
-      console.error('Revalidation error:', e);
-    }
-
+    // revalidatePath is removed to prevent timeouts in serverless environment.
+    // The client-side router.refresh() is sufficient for updating the UI.
     return Response.json({ success: true, itemId, files: results });
   } catch (err: any) {
     console.error('Parallel upload error:', err);
