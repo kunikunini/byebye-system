@@ -33,6 +33,9 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [artist, setArtist] = useState(item.artist ?? '');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [showResultModal, setShowResultModal] = useState(false);
+    const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
+    const [priceSuggestions, setPriceSuggestions] = useState<any | null>(null);
+    const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
     const handleAIAnalyze = async () => {
         setIsAnalyzing(true);
@@ -83,6 +86,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     const info = data.results[0];
                     setTitle(info.title);
                     setArtist(info.artist);
+                    setSelectedReleaseId(info.id);
                 } else {
                     setSearchResults(data.results);
                     setShowResultModal(true);
@@ -102,7 +106,36 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const handleSelectResult = (result: any) => {
         setTitle(result.title);
         setArtist(result.artist);
+        setSelectedReleaseId(result.id);
         setShowResultModal(false);
+    };
+
+    const handleFetchPriceSuggestions = async () => {
+        if (!selectedReleaseId) {
+            alert('まずDiscogs検索で商品を特定してください');
+            return;
+        }
+
+        setIsFetchingPrice(true);
+        try {
+            const res = await fetch(`/api/discogs/price?releaseId=${selectedReleaseId}`);
+            const data = await res.json();
+
+            if (data.error) {
+                if (data.error === 'no_suggestions') {
+                    alert('このリリースの相場データが見つかりませんでした');
+                } else {
+                    alert('相場データの取得に失敗しました');
+                }
+                return;
+            }
+
+            setPriceSuggestions(data);
+        } catch (error) {
+            alert('通信エラーが発生しました');
+        } finally {
+            setIsFetchingPrice(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -211,6 +244,59 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                {/* Price Suggestions Section */}
+                <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-2 text-[10px] font-bold text-black">¥</span>
+                            <span className="text-sm font-bold text-gray-900">相場分析</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleFetchPriceSuggestions}
+                            disabled={!selectedReleaseId || isFetchingPrice}
+                            className={`
+                                relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all active:scale-95 disabled:opacity-50
+                                ${selectedReleaseId
+                                    ? 'bg-black text-white hover:bg-gray-800 animate-pulse-outline ring-2 ring-gold-2/50'
+                                    : 'bg-gray-100 text-gray-400'
+                                }
+                            `}
+                        >
+                            {isFetchingPrice ? (
+                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : (
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                            )}
+                            <span>相場を調べる</span>
+                        </button>
+                    </div>
+
+                    {priceSuggestions ? (
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="rounded-lg bg-gray-50 p-2">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Low</div>
+                                <div className="text-sm font-mono font-bold text-gray-900">${priceSuggestions['Good (G)']?.value?.toFixed(2) || '-'}</div>
+                            </div>
+                            <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
+                                <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Med</div>
+                                <div className="text-sm font-mono font-bold text-gold-4">${priceSuggestions['Very Good Plus (VG+)']?.value?.toFixed(2) || '-'}</div>
+                            </div>
+                            <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
+                                <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">High</div>
+                                <div className="text-sm font-mono font-bold text-blue-600">${priceSuggestions['Mint (M)']?.value?.toFixed(2) || '-'}</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-center text-xs text-gray-400 py-4">
+                            {selectedReleaseId ? 'ボタンを押して相場データを取得してください' : 'Discogs検索でリリースを特定すると利用可能になります'}
+                        </p>
+                    )}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label className="block text-sm font-medium text-text-secondary">storage_location</label>
                         <input
@@ -270,7 +356,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </button>
                     <DeleteItemButton id={item.id} />
                 </div>
-            </form>
+            </form >
 
             {showResultModal && (
                 <DiscogsResultModal
@@ -278,7 +364,8 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     onSelect={handleSelectResult}
                     onClose={() => setShowResultModal(false)}
                 />
-            )}
+            )
+            }
         </>
     );
 }

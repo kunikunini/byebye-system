@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
             // Discogs titles are usually "Artist - Title"
             const [artist, title] = top.title.split(' - ').map((s: string) => s.trim());
             return {
+                id: top.id, // Release ID or Master ID (Search API usually returns Release ID)
                 title: title || top.title,
                 artist: artist || '',
                 catalogNo: top.catno || catno,
