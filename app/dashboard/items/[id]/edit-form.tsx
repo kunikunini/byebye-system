@@ -368,9 +368,9 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                 <div className="grid grid-cols-3 gap-3 text-center">
                                     {/* Price Card Helper */}
                                     {[
-                                        { label: '低', key: 'low' },
-                                        { label: '中間点', key: 'med' },
-                                        { label: '高', key: 'high' }
+                                        { label: priceSuggestions.type === 'suggestions' ? '低' : '販売中(最安)', key: 'low' },
+                                        { label: priceSuggestions.type === 'suggestions' ? '中間点' : '中間点', key: 'med' },
+                                        { label: priceSuggestions.type === 'suggestions' ? '高' : '高', key: 'high' }
                                     ].map((p) => {
                                         let displayVal = '-';
                                         let priceObj = null;
@@ -385,10 +385,25 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
                                         if (priceObj && typeof priceObj === 'object' && priceObj.value) {
                                             const val = priceObj.value;
-                                            const isJPY = priceObj.currency === 'JPY' || priceObj.currency === '円';
-                                            displayVal = isJPY ? `¥${Math.round(val).toLocaleString()}` : `¥${Math.round(val * 150).toLocaleString()}`;
+                                            const currency = priceObj.currency || '';
+                                            const isJPY = currency === 'JPY' || currency === '円' || currency === '¥';
+                                            const isUSD = currency === 'USD' || currency === '$';
+
+                                            if (isJPY) {
+                                                displayVal = `¥${Math.round(val).toLocaleString()}`;
+                                            } else if (isUSD) {
+                                                displayVal = `¥${Math.round(val * 150).toLocaleString()}`;
+                                            } else {
+                                                // Unknown currency, show original value and currency label if possible
+                                                displayVal = `${currency}${Math.round(val).toLocaleString()}`;
+                                            }
                                         } else if (typeof priceObj === 'number') {
                                             displayVal = `¥${Math.round(priceObj * 150).toLocaleString()}`;
+                                        }
+
+                                        // Hide Median/High if they are "-" and we are in stats mode (since standard stats only has lowest_price)
+                                        if (priceSuggestions.type === 'stats' && (p.key === 'med' || p.key === 'high') && displayVal === '-') {
+                                            return null;
                                         }
 
                                         return (
