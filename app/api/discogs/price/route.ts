@@ -14,27 +14,38 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        // Price suggestions for different conditions
-        const url = `https://api.discogs.com/marketplace/price_suggestions/${releaseId}`;
-
-        const res = await fetch(url, {
+        // Try suggestions first
+        const suggestionsUrl = `https://api.discogs.com/marketplace/price_suggestions/${releaseId}`;
+        const sRes = await fetch(suggestionsUrl, {
             headers: {
                 'Authorization': `Discogs token=${token}`,
                 'User-Agent': 'ByeByeSystem/0.1'
             }
         });
 
-        if (!res.ok) {
-            // Some releases might not have price suggestions
-            if (res.status === 404) {
-                return Response.json({ error: 'no_suggestions' }, { status: 404 });
-            }
-            return Response.json({ error: 'discogs_api_error' }, { status: res.status });
+        if (sRes.ok) {
+            const data = await sRes.json();
+            return Response.json({ type: 'suggestions', data });
         }
 
-        const data = await res.json();
-        return Response.json(data);
+        // Fallback to release stats if suggestions are 404 or other errors
+        console.log(`Suggestions not found for ${releaseId}, trying stats fallback...`);
+        const statsUrl = `https://api.discogs.com/releases/${releaseId}/stats`;
+        const stRes = await fetch(statsUrl, {
+            headers: {
+                'Authorization': `Discogs token=${token}`,
+                'User-Agent': 'ByeByeSystem/0.1'
+            }
+        });
+
+        if (stRes.ok) {
+            const statsData = await stRes.json();
+            return Response.json({ type: 'stats', data: statsData });
+        }
+
+        return Response.json({ error: 'no_data_available' }, { status: 404 });
     } catch (e) {
+        console.error('Price API internal error:', e);
         return Response.json({ error: 'internal_error' }, { status: 500 });
     }
 }

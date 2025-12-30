@@ -137,23 +137,17 @@ export default function ItemEditForm({ item }: { item: Item }) {
             console.log('Price suggestions data:', data);
 
             if (data.error) {
-                if (data.error === 'no_suggestions') {
-                    alert('このリリースの相場データが見つかりませんでした');
+                if (data.error === 'no_data_available') {
+                    alert('このリリースの相場データ（推奨価格・販売統計）が見つかりませんでした');
                 } else {
                     alert('相場データの取得に失敗しました');
                 }
                 return;
             }
 
-            if (!data || Object.keys(data).length === 0) {
-                alert('相場データの中身が空でした');
-                return;
-            }
-
             setPriceSuggestions(data);
 
-            // New dedicated toast message for price suggestions
-            setToastMessage('価格情報を取得しました');
+            setToastMessage(data.type === 'suggestions' ? '推奨価格を取得しました' : '販売統計を取得しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2000);
         } catch (error) {
@@ -319,25 +313,54 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </div>
 
                     {priceSuggestions ? (
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                            <div className="rounded-lg bg-gray-50 p-2">
-                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Low</div>
-                                <div className="text-sm font-mono font-bold text-gray-900">
-                                    ${(priceSuggestions['Very Good (VG)']?.value || priceSuggestions['Good (G)']?.value || 0).toFixed(2)}
+                        <div className="space-y-3">
+                            {priceSuggestions.type === 'suggestions' ? (
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                    <div className="rounded-lg bg-gray-50 p-2">
+                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Low</div>
+                                        <div className="text-sm font-mono font-bold text-gray-900">
+                                            ${(priceSuggestions.data['Very Good (VG)']?.value || priceSuggestions.data['Good (G)']?.value || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
+                                        <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Med</div>
+                                        <div className="text-sm font-mono font-bold text-gold-4">
+                                            ${(priceSuggestions.data['Very Good Plus (VG+)']?.value || priceSuggestions.data['Near Mint (NM or M-)']?.value || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
+                                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">High</div>
+                                        <div className="text-sm font-mono font-bold text-blue-600">
+                                            ${(priceSuggestions.data['Mint (M)']?.value || priceSuggestions.data['Near Mint (NM or M-)']?.value || 0).toFixed(2)}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
-                                <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Med</div>
-                                <div className="text-sm font-mono font-bold text-gold-4">
-                                    ${(priceSuggestions['Very Good Plus (VG+)']?.value || priceSuggestions['Near Mint (NM or M-)']?.value || 0).toFixed(2)}
+                            ) : (
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                    <div className="rounded-lg bg-gray-50 p-2">
+                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Lowest</div>
+                                        <div className="text-sm font-mono font-bold text-gray-900">
+                                            ${(priceSuggestions.data.lowest_price?.value || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
+                                        <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Median</div>
+                                        <div className="text-sm font-mono font-bold text-gold-4">
+                                            ${(priceSuggestions.data.community?.rating?.average || 0).toFixed(1)}
+                                        </div>
+                                        <div className="text-[8px] text-gray-400">Avg Rating</div>
+                                    </div>
+                                    <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
+                                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">For Sale</div>
+                                        <div className="text-sm font-mono font-bold text-blue-600">
+                                            {priceSuggestions.data.num_for_sale || 0}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
-                                <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">High</div>
-                                <div className="text-sm font-mono font-bold text-blue-600">
-                                    ${(priceSuggestions['Mint (M)']?.value || priceSuggestions['Near Mint (NM or M-)']?.value || 0).toFixed(2)}
-                                </div>
-                            </div>
+                            )}
+                            <p className="text-[10px] text-right text-gray-400">
+                                Data type: {priceSuggestions.type === 'suggestions' ? 'Market Suggestions' : 'Marketplace Stats'}
+                            </p>
                         </div>
                     ) : (
                         <p className="text-center text-xs text-gray-400 py-4">
