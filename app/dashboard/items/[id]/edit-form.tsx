@@ -99,7 +99,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     const info = data.results[0];
                     setTitle(info.title);
                     setArtist(info.artist);
-                    setSelectedReleaseId(info.id);
+                    setSelectedReleaseId(info.id.toString());
                 } else {
                     setSearchResults(data.results);
                     setShowResultModal(true);
@@ -119,7 +119,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const handleSelectResult = (result: any) => {
         setTitle(result.title);
         setArtist(result.artist);
-        setSelectedReleaseId(result.id);
+        setSelectedReleaseId(result.id.toString());
         setShowResultModal(false);
     };
 
@@ -147,7 +147,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
             setPriceSuggestions(data);
 
-            setToastMessage(data.type === 'suggestions' ? '推奨価格を取得しました' : '販売統計を取得しました');
+            setToastMessage(data.type === 'suggestions' ? '推奨価格を取得しました' : '市場統計を取得しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2000);
         } catch (error) {
@@ -209,35 +209,37 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     <span className="text-sm font-bold text-blue-900">AIビジュアル検索</span>
                 </div>
                 <p className="text-xs text-blue-700">アップロード済みのジャケット画像（表面）から情報を自動入力します。</p>
-                <button
-                    type="button"
-                    onClick={handleAIAnalyze}
-                    disabled={isAnalyzing}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:scale-100"
-                >
-                    {isAnalyzing ? (
-                        <>
-                            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            <span>画像を解析中...</span>
-                        </>
-                    ) : (
-                        <>
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                            <span>画像から情報を抽出</span>
-                        </>
-                    )}
-                </button>
-                <button
-                    type="button"
-                    onClick={handleClearAll}
-                    disabled={isClearing}
-                    className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
-                >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    <span>入力をクリア</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={handleAIAnalyze}
+                        disabled={isAnalyzing}
+                        className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:scale-100"
+                    >
+                        {isAnalyzing ? (
+                            <>
+                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span>画像解析中...</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                <span>情報を抽出</span>
+                            </>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleClearAll}
+                        disabled={isClearing}
+                        className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>クリア</span>
+                    </button>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -271,25 +273,24 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                 onClick={handleDiscogsSearch}
                                 disabled={isSearching}
                                 className="flex items-center gap-1 rounded bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-                                title="Discogsから情報を検索"
                             >
                                 {isSearching ? (
                                     <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                 ) : (
                                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 )}
-                                <span>Discogs検索</span>
+                                <span>検索</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Price Suggestions Section */}
-                <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
+                {/* Price Analysis Section */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-2">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-2 text-[10px] font-bold text-black">¥</span>
-                            <span className="text-sm font-bold text-gray-900">相場分析</span>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold-2 text-[12px] font-black text-black">¥</div>
+                            <span className="text-base font-bold text-gray-900 font-outfit">相場分析 (Market Analysis)</span>
                         </div>
                         <div className="flex gap-2">
                             {priceSuggestions?.releaseId && (
@@ -297,12 +298,12 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                     href={`https://www.discogs.com/release/${priceSuggestions.releaseId}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 hover:text-black active:scale-95"
+                                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 hover:text-black active:scale-95"
                                 >
-                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                     </svg>
-                                    <span>Discogsで詳しく</span>
+                                    <span>詳細</span>
                                 </a>
                             )}
                             <button
@@ -310,10 +311,10 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                 onClick={handleFetchPriceSuggestions}
                                 disabled={!selectedReleaseId || isFetchingPrice}
                                 className={`
-                                    relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all active:scale-95 disabled:opacity-50
+                                    relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50
                                     ${selectedReleaseId
-                                        ? 'bg-black text-white hover:bg-gray-800 animate-pulse-outline ring-2 ring-gold-2/50'
-                                        : 'bg-gray-100 text-gray-400'
+                                        ? 'bg-black text-white hover:bg-gray-800 shadow-lg shadow-black/10 ring-2 ring-gold-2/30'
+                                        : 'bg-gray-50 text-gray-400'
                                     }
                                 `}
                             >
@@ -328,53 +329,59 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </div>
 
                     {priceSuggestions ? (
-                        <div className="space-y-4">
-                            {/* Demand Section (Always show if available) */}
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="rounded-xl bg-pink-50 p-2 border border-pink-100/50">
-                                    <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest">Want (ほしい)</div>
-                                    <div className="text-sm font-mono font-black text-pink-600">
+                        <div className="space-y-5">
+                            {/* Demand Indicators */}
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                                <div className="rounded-2xl bg-pink-50/50 p-3 border border-pink-100/50">
+                                    <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1">Want list</div>
+                                    <div className="text-base font-mono font-black text-pink-600">
                                         {(priceSuggestions.type === 'suggestions' ? priceSuggestions.stats?.num_want : priceSuggestions.data.community?.want) || '-'}
                                     </div>
+                                    <div className="text-[8px] text-pink-300 font-bold">ほしい</div>
                                 </div>
-                                <div className="rounded-xl bg-blue-50 p-2 border border-blue-100/50">
-                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Have (持ってる)</div>
-                                    <div className="text-sm font-mono font-black text-blue-600">
+                                <div className="rounded-2xl bg-blue-50/50 p-3 border border-blue-100/50">
+                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Collection</div>
+                                    <div className="text-base font-mono font-black text-blue-600">
                                         {(priceSuggestions.type === 'suggestions' ? priceSuggestions.stats?.num_have : priceSuggestions.data.community?.have) || '-'}
                                     </div>
+                                    <div className="text-[8px] text-blue-300 font-bold">持ってる</div>
                                 </div>
-                                <div className="rounded-xl bg-gold-2/10 p-2 border border-gold-2/20">
-                                    <div className="text-[10px] font-black text-gold-4 uppercase tracking-widest">Rating (点数)</div>
-                                    <div className="text-sm font-mono font-black text-gold-4">
-                                        {(priceSuggestions.type === 'suggestions' ? priceSuggestions.data.community?.rating?.average : priceSuggestions.data.community?.rating?.average) || '-'}
+                                <div className="rounded-2xl bg-gold-2/10 p-3 border border-gold-2/20">
+                                    <div className="text-[10px] font-black text-gold-4 uppercase tracking-widest mb-1">Avg Rating</div>
+                                    <div className="flex items-center justify-center gap-1">
+                                        <span className="text-base font-mono font-black text-gold-5">
+                                            {(priceSuggestions.type === 'suggestions' ? priceSuggestions.data.community?.rating?.average : priceSuggestions.data.community?.rating?.average) || '-'}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400">/ 5.0</span>
                                     </div>
-                                    <div className="text-[8px] text-gray-400">/ 5.0</div>
+                                    <div className="text-[8px] text-gold-4/60 font-bold">評価点</div>
                                 </div>
                             </div>
 
-                            {/* Price Section */}
-                            <div className="rounded-xl bg-gray-50/50 p-4 border border-gray-100">
-                                <div className="flex items-center justify-between mb-3 px-1">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                                        {priceSuggestions.type === 'suggestions' ? 'Market Suggestions (推奨価格)' : 'Sales History (販売統計)'}
-                                    </span>
-                                    {/* Get last sold date from stats if available */}
+                            {/* Price Statistics */}
+                            <div className="rounded-2xl bg-gray-50/50 p-5 border border-gray-100 shadow-inner">
+                                <div className="flex items-center justify-between mb-4 px-1">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                            {priceSuggestions.type === 'suggestions' ? 'Seller Price Suggestions' : 'Historical Market Prices'}
+                                        </span>
+                                        <span className="text-[9px] text-gray-400 font-bold">
+                                            {priceSuggestions.type === 'suggestions' ? '（コンディション別出品推奨価格）' : '（過去の市場取引統計データ）'}
+                                        </span>
+                                    </div>
                                     {(priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold) && (
-                                        <div className="text-[10px] text-gray-400 font-medium">
-                                            最新の販売: <span className="text-gray-900">{priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold}</span>
+                                        <div className="text-[10px] text-gray-500 font-bold bg-white px-2 py-1 rounded-lg border border-gray-100">
+                                            Last Sold: <span className="text-black">{priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold}</span>
                                         </div>
                                     )}
                                 </div>
                                 <div className="grid grid-cols-3 gap-3 text-center">
-                                    {/* Price Card Helper */}
                                     {[
-                                        { label: priceSuggestions.type === 'suggestions' ? '低' : '販売中(最安)', key: 'low' },
-                                        { label: priceSuggestions.type === 'suggestions' ? '中間点' : '中間点', key: 'med' },
-                                        { label: priceSuggestions.type === 'suggestions' ? '高' : '高', key: 'high' }
+                                        { label: 'Low (低)', key: 'low' },
+                                        { label: 'Median (中)', key: 'med' },
+                                        { label: 'High (高)', key: 'high' }
                                     ].map((p) => {
-                                        let displayVal = '-';
                                         let priceObj = null;
-
                                         if (priceSuggestions.type === 'suggestions') {
                                             const map = { low: 'Very Good (VG)', med: 'Very Good Plus (VG+)', high: 'Mint (M)' };
                                             priceObj = priceSuggestions.data[map[p.key as keyof typeof map]];
@@ -383,33 +390,38 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                             priceObj = priceSuggestions.stats?.[map[p.key as keyof typeof map]] || priceSuggestions.data?.[map[p.key as keyof typeof map]];
                                         }
 
-                                        if (priceObj && typeof priceObj === 'object' && priceObj.value) {
+                                        let displayVal = '-';
+                                        let originalLabel = '';
+
+                                        if (priceObj && typeof priceObj === 'object' && priceObj.value !== undefined) {
                                             const val = priceObj.value;
-                                            const currency = priceObj.currency || '';
-                                            const isJPY = currency === 'JPY' || currency === '円' || currency === '¥';
-                                            const isUSD = currency === 'USD' || currency === '$';
+                                            const curr = (priceObj.currency || '').toUpperCase();
+
+                                            const isJPY = curr === 'JPY' || curr === '円' || curr === '¥';
+                                            const isUSD = curr === 'USD' || curr === '$';
 
                                             if (isJPY) {
                                                 displayVal = `¥${Math.round(val).toLocaleString()}`;
                                             } else if (isUSD) {
                                                 displayVal = `¥${Math.round(val * 150).toLocaleString()}`;
+                                                originalLabel = `$${val.toFixed(2)}`;
+                                            } else if (curr) {
+                                                displayVal = `${curr} ${val.toLocaleString()}`;
                                             } else {
-                                                // Unknown currency, show original value and currency label if possible
-                                                displayVal = `${currency}${Math.round(val).toLocaleString()}`;
+                                                displayVal = val.toLocaleString();
                                             }
-                                        } else if (typeof priceObj === 'number') {
+                                        } else if (typeof priceObj === 'number' && priceObj > 0) {
+                                            // Handle cases where API might just return a number (likely USD)
                                             displayVal = `¥${Math.round(priceObj * 150).toLocaleString()}`;
-                                        }
-
-                                        // Hide Median/High if they are "-" and we are in stats mode (since standard stats only has lowest_price)
-                                        if (priceSuggestions.type === 'stats' && (p.key === 'med' || p.key === 'high') && displayVal === '-') {
-                                            return null;
                                         }
 
                                         return (
                                             <div key={p.key} className={`space-y-1 ${p.key === 'med' ? 'border-x border-gray-100' : ''}`}>
                                                 <div className={`text-[10px] font-bold ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-500'}`}>{p.label}</div>
-                                                <div className={`text-base font-black ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-900'}`}>{displayVal}</div>
+                                                <div className={`text-lg font-black leading-none ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-900'}`}>
+                                                    {displayVal}
+                                                </div>
+                                                {originalLabel && <div className="text-[9px] text-gray-400 font-medium">{originalLabel}</div>}
                                             </div>
                                         );
                                     })}
@@ -418,22 +430,40 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
                             <div className="flex items-center justify-between text-[9px] px-1">
                                 <div className="text-gray-400 font-medium">
-                                    ※ 金額は状況により円貨またはドル貨からの概算を表示しています。
+                                    ※ USD表示のデータは 1ドル=150円 で換算しています。
                                 </div>
-                                <details className="group">
-                                    <summary className="cursor-pointer text-gray-300 uppercase tracking-tighter list-none hover:text-gray-500">
-                                        Debug Data [+]
+                                <details className="group relative">
+                                    <summary className="cursor-pointer text-gray-300 uppercase tracking-tighter list-none hover:text-gray-500 flex items-center gap-1">
+                                        <span>Show Raw API Data</span>
+                                        <svg className="w-2.5 h-2.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                                     </summary>
-                                    <pre className="absolute right-0 bottom-full mb-2 max-h-40 w-64 overflow-auto rounded-lg bg-black p-2 text-[8px] text-green-400 shadow-xl">
-                                        {JSON.stringify(priceSuggestions, null, 2)}
-                                    </pre>
+                                    <div className="absolute right-0 bottom-full mb-3 z-[60] animate-in slide-in-from-bottom-2 fade-in duration-200">
+                                        <div className="max-h-64 w-[320px] overflow-hidden rounded-2xl bg-black/95 shadow-2xl backdrop-blur-xl border border-white/10 ring-1 ring-black">
+                                            <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
+                                                <span className="text-white font-black uppercase tracking-widest text-[8px]">Discogs API Raw Data</span>
+                                                <span className="text-[10px] font-mono text-green-400">JSON</span>
+                                            </div>
+                                            <pre className="p-4 overflow-auto max-h-[220px] text-[10px] font-mono text-green-400 scrollbar-thin scrollbar-thumb-white/10">
+                                                {JSON.stringify(priceSuggestions, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </div>
                                 </details>
                             </div>
                         </div>
                     ) : (
-                        <p className="text-center text-xs text-gray-400 py-4">
-                            {selectedReleaseId ? 'ボタンを押して相場データを取得してください' : 'Discogs検索でリリースを特定すると利用可能になります'}
-                        </p>
+                        <div className="flex flex-col items-center justify-center py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-300 shadow-sm">
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <p className="max-w-[200px] text-xs font-medium text-gray-400 leading-relaxed">
+                                {selectedReleaseId
+                                    ? '上のボタンを押すとDiscogsから市場相場データを取得して表示します'
+                                    : '品番でDiscogsを検索し、リリースを確定させると相場を確認できるようになります'}
+                            </p>
+                        </div>
                     )}
                 </div>
 
