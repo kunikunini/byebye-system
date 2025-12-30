@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useItemsSelection } from './items-selection-context';
 
 type SavedView = {
     id: string;
@@ -11,6 +12,7 @@ type SavedView = {
 };
 
 export default function SavedViewsSelector() {
+    const { showToast } = useItemsSelection();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [views, setViews] = useState<SavedView[]>([]);
@@ -46,7 +48,6 @@ export default function SavedViewsSelector() {
         if (!newViewName.trim()) return;
 
         // Construct filters from current URL params
-        // Exclude 'viewId' itself
         const filters: Record<string, string> = {};
         searchParams.forEach((val, key) => {
             if (key !== 'viewId') filters[key] = val;
@@ -63,9 +64,9 @@ export default function SavedViewsSelector() {
                 const created = await res.json();
                 setNewViewName('');
                 setShowSaveModal(false);
-                fetchViews(); // Refresh list
+                fetchViews();
+                showToast(`ビュー「${newViewName}」を保存しました`);
 
-                // Switch to the new view
                 const params = new URLSearchParams(searchParams);
                 params.set('viewId', created.id);
                 router.push(`/dashboard/items?${params.toString()}`);
@@ -99,6 +100,7 @@ export default function SavedViewsSelector() {
             });
             if (!res.ok) throw new Error('Failed');
             await fetchViews();
+            showToast('条件を上書き保存しました');
         } catch (e) {
             alert('上書き保存に失敗しました');
         } finally {
@@ -111,6 +113,7 @@ export default function SavedViewsSelector() {
         if (!confirm('選択中のキューを削除しますか？')) return;
         try {
             await fetch(`/api/views/${activeView.id}`, { method: 'DELETE' });
+            showToast('ビューを削除しました');
             const newViews = views.filter(v => v.id !== activeView.id);
             setViews(newViews);
             const params = new URLSearchParams(searchParams);
@@ -121,7 +124,6 @@ export default function SavedViewsSelector() {
         }
     };
 
-    // unsaved indicator if URL filters differ from active view filters
     const isDirty = (() => {
         if (!activeView) return false;
         const current = getCurrentFiltersFromURL();
@@ -136,10 +138,10 @@ export default function SavedViewsSelector() {
 
         try {
             await fetch(`/api/views/${id}`, { method: 'DELETE' });
+            showToast('削除しました');
             const newViews = views.filter(v => v.id !== id);
             setViews(newViews);
 
-            // If deleted view was active, clear viewId
             if (currentViewId === id) {
                 const params = new URLSearchParams(searchParams);
                 params.delete('viewId');
@@ -152,13 +154,11 @@ export default function SavedViewsSelector() {
 
     const handleSelect = (view: SavedView) => {
         const params = new URLSearchParams();
-        // Apply saved filters
         if (view.filters) {
             Object.entries(view.filters).forEach(([k, v]) => {
                 params.set(k, String(v));
             });
         }
-        // Set viewId
         params.set('viewId', view.id);
         router.push(`/dashboard/items?${params.toString()}`);
         setIsOpen(false);
@@ -166,111 +166,140 @@ export default function SavedViewsSelector() {
 
     return (
         <div className="relative">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+                    className={`flex items-center gap-3 rounded-xl border px-5 py-2.5 text-sm font-bold shadow-sm transition-all hover:scale-105 active:scale-95 ${activeView ? 'border-gold-2 bg-gold-2/5 text-black ring-1 ring-gold-2' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
                 >
+                    <svg className={`h-4 w-4 ${activeView ? 'text-gold-4' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
                     <span>{activeView ? `キュー: ${activeView.name}` : '作業キューを選択'}</span>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <svg className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
                 {activeView && (
-                    <button
-                        onClick={() => {
-                            const params = new URLSearchParams(searchParams);
-                            params.delete('viewId');
-                            router.push(`/dashboard/items?${params.toString()}`);
-                        }}
-                        className="px-2 py-2 text-gray-500 hover:text-gray-700"
-                        title="選択解除"
-                    >
-                        ✕
-                    </button>
-                )}
+                    <>
+                        <button
+                            onClick={handleOverwrite}
+                            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold shadow-sm transition-all hover:scale-105 active:scale-95 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 ${isDirty ? 'ring-2 ring-orange-500/20 bg-orange-50/50' : ''}`}
+                            disabled={saving}
+                            title="現在の条件で上書き保存"
+                        >
+                            {saving ? (
+                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : (
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                            )}
+                            <span>保存</span>
+                            {isDirty && <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></span>}
+                        </button>
 
-                <button
-                    onClick={handleOverwrite}
-                    className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm disabled:opacity-50"
-                    disabled={saving}
-                >
-                    保存
-                </button>
-                <button
-                    onClick={() => setShowSaveModal(true)}
-                    className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
-                >
-                    名前を付けて保存
-                </button>
-                <button
-                    onClick={handleDeleteActive}
-                    className="rounded border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 shadow-sm disabled:opacity-50"
-                    disabled={!activeView}
-                >
-                    削除
-                </button>
-
-                {activeView && isDirty && (
-                    <span className="ml-1 text-xs text-orange-600">● 未保存</span>
+                        <button
+                            onClick={handleDeleteActive}
+                            className="flex items-center gap-2 rounded-xl border border-red-100 bg-white px-4 py-2.5 text-sm font-bold text-red-600 shadow-sm transition-all hover:scale-105 hover:bg-red-50 hover:border-red-200 active:scale-95"
+                            title="このビューを削除"
+                        >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </>
                 )}
             </div>
 
             {/* Dropdown */}
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-                    <div className="absolute left-0 mt-1 z-20 w-64 rounded-md border border-gray-200 bg-white shadow-lg animate-in fade-in zoom-in-95 duration-100">
-                        <div className="p-1">
-                            {loading && <div className="p-2 text-xs text-gray-500">Loading...</div>}
-                            {!loading && views.length === 0 && <div className="p-2 text-xs text-gray-500">保存されたキューはありません</div>}
+                    <div className="fixed inset-0 z-40 bg-black/5" onClick={() => setIsOpen(false)} />
+                    <div className="absolute left-0 mt-3 z-50 w-72 rounded-2xl border border-gray-100 bg-white/95 p-3 shadow-[0_20px_50px_rgba(0,0,0,0.2)] backdrop-blur-md animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+                        <div className="mb-2 px-3 py-2">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Saved Views</h4>
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto space-y-1">
+                            {loading && <div className="p-4 text-center text-xs text-gray-400">読み込み中...</div>}
+                            {!loading && views.length === 0 && <div className="p-4 text-center text-xs text-gray-400">保存されたビューはありません</div>}
 
                             {views.map((v) => (
                                 <div
                                     key={v.id}
                                     onClick={() => handleSelect(v)}
-                                    className={`flex items-center justify-between rounded px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${currentViewId === v.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}`}
+                                    className={`group flex items-center justify-between rounded-xl px-4 py-3 text-sm cursor-pointer transition-all hover:bg-gray-50 ${currentViewId === v.id ? 'bg-gold-2/10 text-black font-bold ring-1 ring-gold-2/20' : 'text-gray-700'}`}
                                 >
                                     <span className="truncate">{v.name}</span>
                                     <button
                                         onClick={(e) => handleDelete(v.id, e)}
-                                        className="text-gray-400 hover:text-red-500 p-1"
+                                        className="opacity-0 group-hover:opacity-100 h-8 w-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-all"
                                     >
                                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
                                 </div>
                             ))}
                         </div>
+                        {!loading && views.length > 0 && (
+                            <div className="mt-2 border-t border-gray-50 pt-2 px-1">
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        setShowSaveModal(true);
+                                    }}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-all"
+                                >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                    <span>新しく保存する</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </>
             )}
 
             {/* Save Modal */}
             {showSaveModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="w-80 rounded-lg bg-white p-4 shadow-xl">
-                        <h3 className="mb-3 text-sm font-bold">現在の条件を保存</h3>
-                        <input
-                            type="text"
-                            placeholder="キューの名前 (例: 今日の出品)"
-                            value={newViewName}
-                            onChange={(e) => setNewViewName(e.target.value)}
-                            className="mb-4 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                            autoFocus
-                        />
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowSaveModal(false)}
-                                className="rounded px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-                            >
-                                キャンセル
-                            </button>
-                            <button
-                                onClick={handleSaveAs}
-                                disabled={!newViewName.trim()}
-                                className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-                            >
-                                保存
-                            </button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="w-full max-w-sm rounded-[2rem] bg-white p-8 shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-200">
+                        <div className="text-center mb-6">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">条件を保存</h3>
+                            <p className="mt-2 text-sm text-gray-500">
+                                この検索条件に名前を付けて保存します。
+                            </p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 pl-1">Name</label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="例: 未処理のLP、出品待ち"
+                                    value={newViewName}
+                                    onChange={(e) => setNewViewName(e.target.value)}
+                                    className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 text-sm focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black shadow-inner transition-all"
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowSaveModal(false)}
+                                    className="flex-1 rounded-2xl border border-gray-100 py-4 text-sm font-bold text-gray-500 hover:bg-gray-50 active:scale-95 transition-all"
+                                >
+                                    戻る
+                                </button>
+                                <button
+                                    onClick={handleSaveAs}
+                                    disabled={!newViewName.trim() || saving}
+                                    className="flex-1 rounded-2xl bg-black py-4 text-sm font-bold text-white shadow-lg shadow-black/20 hover:bg-gold-2 hover:text-black hover:shadow-gold-2/30 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    保存する
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

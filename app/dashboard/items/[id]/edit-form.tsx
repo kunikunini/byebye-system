@@ -328,59 +328,79 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </div>
 
                     {priceSuggestions ? (
-                        <div className="space-y-3">
-                            {priceSuggestions.type === 'suggestions' ? (
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="rounded-lg bg-gray-50 p-2">
-                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Low</div>
-                                        <div className="text-sm font-mono font-bold text-gray-900">
-                                            {priceSuggestions.data['Very Good (VG)']?.value ? `$${priceSuggestions.data['Very Good (VG)'].value.toFixed(2)}` : '-'}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
-                                        <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Med</div>
-                                        <div className="text-sm font-mono font-bold text-gold-4">
-                                            {priceSuggestions.data['Very Good Plus (VG+)']?.value ? `$${priceSuggestions.data['Very Good Plus (VG+)'].value.toFixed(2)}` : '-'}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
-                                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">High</div>
-                                        <div className="text-sm font-mono font-bold text-blue-600">
-                                            {priceSuggestions.data['Mint (M)']?.value ? `$${priceSuggestions.data['Mint (M)'].value.toFixed(2)}` : '-'}
-                                        </div>
+                        <div className="space-y-4">
+                            {/* Demand Section (Always show if available) */}
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="rounded-xl bg-pink-50 p-2 border border-pink-100/50">
+                                    <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest">Want (ほしい)</div>
+                                    <div className="text-sm font-mono font-black text-pink-600">
+                                        {(priceSuggestions.type === 'suggestions' ? priceSuggestions.stats?.num_want : priceSuggestions.data.community?.want) || '-'}
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="rounded-lg bg-pink-50 p-2 border border-pink-100">
-                                        <div className="text-[10px] font-bold text-pink-600 uppercase tracking-wider">Want (ほしい)</div>
-                                        <div className="text-sm font-mono font-bold text-pink-600">
-                                            {priceSuggestions.data.community?.want || '-'}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg bg-blue-50 p-2 border border-blue-100">
-                                        <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Have (持ってる)</div>
-                                        <div className="text-sm font-mono font-bold text-blue-600">
-                                            {priceSuggestions.data.community?.have || '-'}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-lg bg-gold-2/10 p-2 border border-gold-2/20">
-                                        <div className="text-[10px] font-bold text-gold-4 uppercase tracking-wider">Rating (点数)</div>
-                                        <div className="text-sm font-mono font-bold text-gold-4">
-                                            {priceSuggestions.data.community?.rating?.average || '-'}
-                                        </div>
-                                        <div className="text-[8px] text-gray-400">/ 5.0</div>
+                                <div className="rounded-xl bg-blue-50 p-2 border border-blue-100/50">
+                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Have (持ってる)</div>
+                                    <div className="text-sm font-mono font-black text-blue-600">
+                                        {(priceSuggestions.type === 'suggestions' ? priceSuggestions.stats?.num_have : priceSuggestions.data.community?.have) || '-'}
                                     </div>
                                 </div>
-                            )}
-                            <div className="flex items-center justify-between text-[10px]">
-                                <div className="text-gray-500">
-                                    {priceSuggestions.type === 'stats' && (
-                                        <span>※正確な価格は「詳しくみる」からDiscogsで直接ご確認ください</span>
+                                <div className="rounded-xl bg-gold-2/10 p-2 border border-gold-2/20">
+                                    <div className="text-[10px] font-black text-gold-4 uppercase tracking-widest">Rating (点数)</div>
+                                    <div className="text-sm font-mono font-black text-gold-4">
+                                        {(priceSuggestions.type === 'suggestions' ? priceSuggestions.data.community?.rating?.average : priceSuggestions.data.community?.rating?.average) || '-'}
+                                    </div>
+                                    <div className="text-[8px] text-gray-400">/ 5.0</div>
+                                </div>
+                            </div>
+
+                            {/* Price Section */}
+                            <div className="rounded-xl bg-gray-50/50 p-4 border border-gray-100">
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                        {priceSuggestions.type === 'suggestions' ? 'Market Suggestions (推奨価格)' : 'Sales History (販売統計)'}
+                                    </span>
+                                    {priceSuggestions.stats?.last_sold && (
+                                        <div className="text-[10px] text-gray-400 font-medium">
+                                            最新の販売: <span className="text-gray-900">{priceSuggestions.stats.last_sold}</span>
+                                        </div>
                                     )}
                                 </div>
-                                <div className="text-gray-400">
-                                    Source: {priceSuggestions.type === 'suggestions' ? 'Seller Suggestion' : 'Community Demand'}
+                                <div className="grid grid-cols-3 gap-3 text-center">
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-gray-500">低</div>
+                                        <div className="text-base font-black text-gray-900">
+                                            {priceSuggestions.type === 'suggestions'
+                                                ? (priceSuggestions.data['Very Good (VG)']?.value ? `¥${Math.round(priceSuggestions.data['Very Good (VG)'].value * 150).toLocaleString()}` : '-')
+                                                : (priceSuggestions.stats?.lowest_price?.value ? `¥${Math.round(priceSuggestions.stats.lowest_price.value * 150).toLocaleString()}` : '-')
+                                            }
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1 border-x border-gray-100">
+                                        <div className="text-[10px] font-bold text-gold-5">中間点</div>
+                                        <div className="text-base font-black text-gold-5">
+                                            {priceSuggestions.type === 'suggestions'
+                                                ? (priceSuggestions.data['Very Good Plus (VG+)']?.value ? `¥${Math.round(priceSuggestions.data['Very Good Plus (VG+)'].value * 150).toLocaleString()}` : '-')
+                                                : (priceSuggestions.stats?.median?.value ? `¥${Math.round(priceSuggestions.stats.median.value * 150).toLocaleString()}` : '-')
+                                            }
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-blue-600">高</div>
+                                        <div className="text-base font-black text-blue-600">
+                                            {priceSuggestions.type === 'suggestions'
+                                                ? (priceSuggestions.data['Mint (M)']?.value ? `¥${Math.round(priceSuggestions.data['Mint (M)'].value * 150).toLocaleString()}` : '-')
+                                                : (priceSuggestions.stats?.highest_price?.value ? `¥${Math.round(priceSuggestions.stats.highest_price.value * 150).toLocaleString()}` : '-')
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[9px] px-1">
+                                <div className="text-gray-400 font-medium">
+                                    ※ 1ドル = 150円で概算しています。
+                                </div>
+                                <div className="text-gray-300 uppercase tracking-tighter">
+                                    Discogs API Data • {new Date().toLocaleDateString()}
                                 </div>
                             </div>
                         </div>

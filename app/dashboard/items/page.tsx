@@ -119,9 +119,12 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard/items/new"
-              className="rounded bg-black px-4 py-2 text-sm font-medium text-white shadow-md transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-xl active:scale-95"
+              className="flex items-center gap-2 rounded-xl bg-black px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-gold-2/20 active:scale-95"
             >
-              新規追加
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>新規追加</span>
             </Link>
           </div>
           <WorkQueueStatus
@@ -131,18 +134,20 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
           />
         </div>
 
-        <form className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            name="q"
-            placeholder="sku / title / artist / catalog_no"
-            defaultValue={q}
-            className="w-64 rounded border border-gray-200 bg-white px-3 py-2 text-text-primary placeholder-text-muted focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2 shadow-sm"
-          />
+        <form className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <input
+              type="text"
+              name="q"
+              placeholder="sku / title / artist / catalog_no"
+              defaultValue={q}
+              className="w-72 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-text-primary placeholder-text-muted focus:border-black focus:outline-none focus:ring-1 focus:ring-black shadow-sm transition-all"
+            />
+          </div>
           <select
             name="status"
             defaultValue={status}
-            className="rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2 shadow-sm"
+            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-text-primary focus:border-black focus:outline-none focus:ring-1 focus:ring-black shadow-sm cursor-pointer"
           >
             <option value="">status (all)</option>
             <option value="UNPROCESSED">UNPROCESSED</option>
@@ -154,22 +159,22 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
           <select
             name="type"
             defaultValue={type}
-            className="rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2 shadow-sm"
+            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-text-primary focus:border-black focus:outline-none focus:ring-1 focus:ring-black shadow-sm cursor-pointer"
           >
             <option value="">type (all)</option>
             <option value="VINYL">VINYL</option>
             <option value="CD">CD</option>
           </select>
           <button
-            className="rounded-lg border border-gray-300 bg-white px-5 py-2 text-sm font-bold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:border-gold-2 hover:text-gold-3 hover:shadow-xl active:scale-95 flex items-center gap-2"
+            className="group flex items-center gap-2 rounded-xl bg-black px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black active:scale-95"
             type="submit"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <svg className="h-4 w-4 transition-transform group-hover:rotate-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <span>検索</span>
           </button>
-          <div className="h-8 w-px bg-gray-200 mx-1 self-center hidden sm:block"></div>
+          <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block"></div>
           <SaveViewModal />
         </form>
 

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        // Try suggestions first
+        // 1. Try Marketplace Price Suggestions (Seller view)
         const suggestionsUrl = `https://api.discogs.com/marketplace/price_suggestions/${releaseId}`;
         const sRes = await fetch(suggestionsUrl, {
             headers: {
@@ -25,22 +25,40 @@ export async function GET(req: NextRequest) {
 
         if (sRes.ok) {
             const data = await sRes.json();
-            return Response.json({ type: 'suggestions', data, releaseId });
+            // Even if we have suggestions, we might want community stats for Want/Have
+            const statsRes = await fetch(`https://api.discogs.com/releases/${releaseId}/stats`, {
+                headers: {
+                    'Authorization': `Discogs token=${token}`,
+                    'User-Agent': 'ByeByeSystem/0.1'
+                }
+            });
+            const stats = statsRes.ok ? await statsRes.json() : null;
+            return Response.json({ type: 'suggestions', data, stats, releaseId });
         }
 
-        // Fallback to release stats if suggestions are 404 or other errors
+        // 2. Fallback to Release Stats (Buyer/History view)
         console.log(`Suggestions not found for ${releaseId}, trying stats fallback...`);
-        const statsUrl = `https://api.discogs.com/releases/${releaseId}`;
-        const stRes = await fetch(statsUrl, {
-            headers: {
-                'Authorization': `Discogs token=${token}`,
-                'User-Agent': 'ByeByeSystem/0.1'
-            }
-        });
 
-        if (stRes.ok) {
-            const releaseData = await stRes.json();
-            return Response.json({ type: 'stats', data: releaseData, releaseId });
+        // Fetch both release details and stats
+        const [releaseRes, statsRes] = await Promise.all([
+            fetch(`https://api.discogs.com/releases/${releaseId}`, {
+                headers: { 'Authorization': `Discogs token=${token}`, 'User-Agent': 'ByeByeSystem/0.1' }
+            }),
+            fetch(`https://api.discogs.com/releases/${releaseId}/stats`, {
+                headers: { 'Authorization': `Discogs token=${token}`, 'User-Agent': 'ByeByeSystem/0.1' }
+            })
+        ]);
+
+        if (releaseRes.ok && statsRes.ok) {
+            const releaseData = await releaseRes.json();
+            const statsData = await statsRes.json();
+
+            return Response.json({
+                type: 'stats',
+                data: releaseData, // release info (community, etc.)
+                stats: statsData,   // historical price info (num_for_sale, lowest_price, last_sold, num_have, num_want)
+                releaseId
+            });
         }
 
         return Response.json({ error: 'no_data_available' }, { status: 404 });

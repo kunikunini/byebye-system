@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import BatchDiscogsModal from './batch-discogs-modal';
 
 export default function BatchActionBar() {
-    const { selectedIds, clearSelection } = useItemsSelection();
+    const { selectedIds, clearSelection, showToast } = useItemsSelection();
     const [loading, setLoading] = useState(false);
     const [showDiscogsModal, setShowDiscogsModal] = useState(false);
     const router = useRouter();
@@ -26,6 +26,7 @@ export default function BatchActionBar() {
             });
 
             if (res.ok) {
+                showToast(`${selectedIds.length} 件を ${newStatus} に変更しました`);
                 clearSelection();
                 router.refresh();
             } else {
@@ -50,6 +51,7 @@ export default function BatchActionBar() {
             });
 
             if (res.ok) {
+                showToast(`${selectedIds.length} 件を削除しました`);
                 clearSelection();
                 router.refresh();
             } else {
@@ -81,6 +83,7 @@ export default function BatchActionBar() {
                 a.click();
                 a.remove();
                 window.URL.revokeObjectURL(url);
+                showToast('CSVを出力しました');
             } else {
                 alert('CSV出力に失敗しました');
             }
@@ -92,75 +95,80 @@ export default function BatchActionBar() {
     };
 
     return (
-        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-gray-200 bg-white/90 p-4 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[10px] font-bold text-white">
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.2)] backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 ring-1 ring-black/5">
+            <div className="flex items-center gap-3 pl-2">
+                <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs font-bold text-white shadow-lg">
                     {selectedIds.length}
-                </span>
-                <span className="text-sm font-bold text-gray-900">selected</span>
+                    <div className="absolute inset-0 rounded-full animate-ping bg-black/20"></div>
+                </div>
+                <span className="text-xs font-black uppercase tracking-widest text-gray-400">Selected</span>
             </div>
 
-            <div className="h-6 w-px bg-gray-200"></div>
+            <div className="h-8 w-px bg-gray-100 mx-2"></div>
 
             <div className="flex items-center gap-2">
                 {/* Quick Status Actions */}
                 <button
                     onClick={() => handleStatusChange('READY')}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs font-bold text-green-700 shadow-sm shadow-green-100 transition-all hover:scale-105 hover:bg-green-100 hover:shadow-md active:scale-95 disabled:opacity-50"
+                    className="group relative flex items-center gap-2 rounded-xl border border-green-100 bg-green-50/50 px-4 py-2.5 text-xs font-bold text-green-700 transition-all hover:scale-105 hover:bg-green-100 active:scale-95 disabled:opacity-50"
                     title="準備完了にする"
                 >
-                    🟢 READY
+                    <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                    <span>READY</span>
                 </button>
                 <button
                     onClick={() => handleStatusChange('LISTED')}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 shadow-sm shadow-blue-100 transition-all hover:scale-105 hover:bg-blue-100 hover:shadow-md active:scale-95 disabled:opacity-50"
+                    className="group relative flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-2.5 text-xs font-bold text-blue-700 transition-all hover:scale-105 hover:bg-blue-100 active:scale-95 disabled:opacity-50"
                     title="出品済みにする"
                 >
-                    🔵 LISTED
+                    <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                    <span>LISTED</span>
                 </button>
 
-                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                <div className="h-8 w-px bg-gray-100 mx-2"></div>
 
                 {/* Batch Discogs Search */}
                 <button
                     onClick={() => setShowDiscogsModal(true)}
                     disabled={loading}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-[0_10px_20px_rgba(37,99,235,0.3)] transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-[0_15px_30px_rgba(37,99,235,0.4)] active:scale-95 disabled:opacity-50"
                 >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <span>Discogs一括検索</span>
                 </button>
 
                 <button
                     onClick={handleExport}
                     disabled={loading}
-                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-md shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 hover:shadow-lg active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-700 shadow-sm transition-all hover:scale-105 hover:bg-gray-50 active:scale-95 disabled:opacity-50"
                 >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     <span>CSV</span>
                 </button>
 
-                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                <div className="h-8 w-px bg-gray-100 mx-2"></div>
 
                 <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 shadow-md shadow-red-50 transition-all hover:scale-105 hover:bg-red-100 hover:shadow-lg active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50/50 px-4 py-2.5 text-xs font-bold text-red-600 transition-all hover:scale-105 hover:bg-red-100 active:scale-95 disabled:opacity-50"
                 >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span>削除</span>
                 </button>
             </div>
 
+            <div className="h-8 w-px bg-gray-100 mx-2"></div>
+
             <button
                 onClick={clearSelection}
-                className="ml-2 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                className="group flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-900 active:scale-90"
                 disabled={loading}
                 title="選択解除"
             >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
             {showDiscogsModal && (
