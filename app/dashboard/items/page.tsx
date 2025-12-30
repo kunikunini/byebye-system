@@ -161,10 +161,13 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
             <option value="CD">CD</option>
           </select>
           <button
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-md transition-all duration-200 hover:border-gold-2 hover:text-gold-3 hover:shadow-lg active:scale-95"
+            className="rounded-lg border border-gray-300 bg-white px-5 py-2 text-sm font-bold text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:border-gold-2 hover:text-gold-3 hover:shadow-xl active:scale-95 flex items-center gap-2"
             type="submit"
           >
-            検索
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>検索</span>
           </button>
           <div className="h-8 w-px bg-gray-200 mx-1 self-center hidden sm:block"></div>
           <SaveViewModal />
@@ -218,9 +221,13 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
                         )}
                       </div>
                     </td>
-                    <td className="group relative px-4 py-3 font-mono font-medium text-text-primary">
-                      <Link href={`/dashboard/items/${r.id}`} className="block w-full h-full absolute inset-0 z-10"></Link>
-                      <span className="relative z-20 text-blue-600 underline decoration-blue-300 underline-offset-4 hover:decoration-blue-500">{r.sku}</span>
+                    <td className="px-4 py-3 font-mono font-medium relative z-20">
+                      <Link
+                        href={`/dashboard/items/${r.id}`}
+                        className="inline-block px-2 py-1 -mx-2 -my-1 rounded-md text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200 group-hover:underline decoration-blue-300 underline-offset-4"
+                      >
+                        {r.sku}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-text-primary whitespace-nowrap relative z-20 font-bold">{r.catalogNo || '-'}</td>
                     <td className="px-4 py-3 text-text-secondary relative z-20">{r.itemType}</td>

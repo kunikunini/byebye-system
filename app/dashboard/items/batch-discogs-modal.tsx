@@ -142,16 +142,23 @@ export default function BatchDiscogsModal({
                             <button
                                 onClick={onClose}
                                 disabled={isProcessing}
-                                className="flex-1 rounded-xl border border-gray-300 bg-white py-3 text-sm font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                                className="flex-1 rounded-xl border border-gray-300 bg-white py-3 text-sm font-bold text-gray-700 shadow-md shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 active:scale-95 disabled:opacity-50"
                             >
                                 キャンセル
                             </button>
                             <button
                                 onClick={startBatchSearch}
                                 disabled={isProcessing || items.length === 0}
-                                className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50 transition-all active:scale-95"
+                                className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50"
                             >
-                                {isProcessing ? '検索中...' : '検索を開始'}
+                                {isProcessing ? (
+                                    <div className="flex items-center justify-center gap-2">
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        <span>検索中...</span>
+                                    </div>
+                                ) : (
+                                    '検索を開始'
+                                )}
                             </button>
                         </div>
                     ) : (
@@ -161,7 +168,7 @@ export default function BatchDiscogsModal({
                             </p>
                             <button
                                 onClick={onComplete}
-                                className="w-full rounded-xl bg-black py-3 text-sm font-bold text-white shadow-lg hover:bg-gold-2 hover:text-black transition-all active:scale-95"
+                                className="w-full rounded-xl bg-black py-4 text-sm font-bold text-white shadow-xl shadow-black/20 transition-all hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-2xl active:scale-95"
                             >
                                 閉じる
                             </button>

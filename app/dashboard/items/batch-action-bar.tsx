@@ -107,7 +107,7 @@ export default function BatchActionBar() {
                 <button
                     onClick={() => handleStatusChange('READY')}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-100 disabled:opacity-50 transition-all active:scale-95"
+                    className="flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs font-bold text-green-700 shadow-sm shadow-green-100 transition-all hover:scale-105 hover:bg-green-100 hover:shadow-md active:scale-95 disabled:opacity-50"
                     title="準備完了にする"
                 >
                     🟢 READY
@@ -115,7 +115,7 @@ export default function BatchActionBar() {
                 <button
                     onClick={() => handleStatusChange('LISTED')}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-all active:scale-95"
+                    className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 shadow-sm shadow-blue-100 transition-all hover:scale-105 hover:bg-blue-100 hover:shadow-md active:scale-95 disabled:opacity-50"
                     title="出品済みにする"
                 >
                     🔵 LISTED
@@ -127,16 +127,16 @@ export default function BatchActionBar() {
                 <button
                     onClick={() => setShowDiscogsModal(true)}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-all active:scale-95"
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50"
                 >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     <span>Discogs一括検索</span>
                 </button>
 
                 <button
                     onClick={handleExport}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all active:scale-95"
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-md shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 hover:shadow-lg active:scale-95 disabled:opacity-50"
                 >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                     <span>CSV</span>
@@ -147,7 +147,7 @@ export default function BatchActionBar() {
                 <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50 transition-all active:scale-95"
+                    className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 shadow-md shadow-red-50 transition-all hover:scale-105 hover:bg-red-100 hover:shadow-lg active:scale-95 disabled:opacity-50"
                 >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span>削除</span>

@@ -204,7 +204,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     type="button"
                     onClick={handleAIAnalyze}
                     disabled={isAnalyzing}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:scale-100"
                 >
                     {isAnalyzing ? (
                         <>
@@ -221,7 +221,8 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 <button
                     type="button"
                     onClick={handleClearAll}
-                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm transition-all hover:bg-gray-50 active:scale-95"
+                    disabled={isClearing}
+                    className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
                 >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -358,31 +359,38 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-start gap-4 border-t border-borderColor-subtle pt-4">
+                <div className="flex items-center justify-start gap-4 border-t border-gray-100 pt-6">
                     <Link
                         href="/dashboard/items"
-                        className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-md transition-all duration-200 hover:scale-105 hover:border-gold-2 hover:text-gold-3 hover:shadow-xl active:scale-95"
+                        className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
                     >
                         一覧へ戻る
                     </Link>
                     <button
-                        className="rounded bg-black px-6 py-2 font-medium text-white shadow-md transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
+                        className="rounded-xl bg-black px-8 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100"
                         type="submit"
                         disabled={isLoading}
                     >
                         {isLoading ? (
                             <div className="flex items-center gap-2">
-                                <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 <span>保存中...</span>
                             </div>
                         ) : (
-                            '保存'
+                            <div className="flex items-center gap-2">
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>保存する</span>
+                            </div>
                         )}
                     </button>
-                    <DeleteItemButton id={item.id} />
+                    <div className="ml-auto">
+                        <DeleteItemButton id={item.id} sku={item.sku} />
+                    </div>
                 </div>
             </form >
 
