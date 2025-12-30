@@ -81,6 +81,6 @@ Only return the JSON object, nothing else.`;
 
     } catch (e: any) {
         console.error('Gemini error:', e);
-        return Response.json({ error: 'ai_error', message: `(Code v3.2) ${e.message}` }, { status: 500 });
+        return Response.json({ error: 'ai_error', message: e.message }, { status: 500 });
     }
 }
