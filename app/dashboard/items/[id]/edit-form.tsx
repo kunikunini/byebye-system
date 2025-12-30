@@ -134,11 +134,11 @@ export default function ItemEditForm({ item }: { item: Item }) {
             const res = await fetch(`/api/discogs/price?releaseId=${selectedReleaseId}`);
             const data = await res.json();
 
-            console.log('Price suggestions data:', data);
+            console.log('Detailed Price Data:', data);
 
             if (data.error) {
                 if (data.error === 'no_data_available') {
-                    alert('このリリースの相場データ（推奨価格・販売統計）が見つかりませんでした');
+                    alert('このリリースの相場データが見つかりませんでした');
                 } else {
                     alert('相場データの取得に失敗しました');
                 }
@@ -146,7 +146,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
             }
 
             setPriceSuggestions(data);
-
             setToastMessage('最新の市場データを取得しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2000);
@@ -183,9 +182,50 @@ export default function ItemEditForm({ item }: { item: Item }) {
         }
     };
 
+    // Helper for formatting prices based on Discogs rules
+    const formatDiscogsPrice = (priceObj: any) => {
+        if (!priceObj) return { display: '-', sub: '' };
+
+        let val = typeof priceObj === 'object' ? priceObj.value : priceObj;
+        let curr = typeof priceObj === 'object' ? (priceObj.currency || '').toUpperCase() : '';
+
+        if (val === undefined || val === null) return { display: '-', sub: '' };
+
+        // Normalizing currency labels
+        if (curr === '円' || curr === '¥') curr = 'JPY';
+        if (curr === '$') curr = 'USD';
+
+        // 1. Strict Currency Logic
+        if (curr === 'JPY') {
+            return { display: `¥${Math.round(val).toLocaleString()}`, sub: '' };
+        }
+
+        if (curr === 'USD') {
+            return {
+                display: `¥${Math.round(val * 150).toLocaleString()}`,
+                sub: `$${val.toFixed(2)}`
+            };
+        }
+
+        // 2. Multi-currency handling (EUR, GBP, etc.)
+        if (curr) {
+            return { display: `${curr} ${val.toLocaleString()}`, sub: '' };
+        }
+
+        // 3. Fallback Smart Detection (if currency is missing)
+        if (val > 500) {
+            return { display: `¥${Math.round(val).toLocaleString()}`, sub: '※円と推定' };
+        } else {
+            return {
+                display: `¥${Math.round(val * 150).toLocaleString()}`,
+                sub: `$${val.toFixed(2)} ※ドルと推定`
+            };
+        }
+    };
+
     return (
         <>
-            {/* Toast Notification (Center Overlay) */}
+            {/* Toast Notification */}
             {showToast && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
                     <div className="rounded-2xl bg-black/90 px-8 py-5 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md animate-in zoom-in-95 fade-in duration-300">
@@ -195,9 +235,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-xl font-bold tracking-tight">{toastMessage}</p>
-                            </div>
+                            <p className="text-xl font-bold tracking-tight">{toastMessage}</p>
                         </div>
                     </div>
                 </div>
@@ -208,7 +246,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white">✨</span>
                     <span className="text-sm font-bold text-blue-900">AIビジュアル検索</span>
                 </div>
-                <p className="text-xs text-blue-700">アップロード済みのジャケット画像（表面）から情報を自動入力します。</p>
                 <div className="flex gap-2">
                     <button
                         type="button"
@@ -216,251 +253,165 @@ export default function ItemEditForm({ item }: { item: Item }) {
                         disabled={isAnalyzing}
                         className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:scale-105 hover:bg-blue-700 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:scale-100"
                     >
-                        {isAnalyzing ? (
-                            <>
-                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                <span>画像解析中...</span>
-                            </>
-                        ) : (
-                            <>
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                <span>情報を抽出</span>
-                            </>
-                        )}
+                        {isAnalyzing ? "解析中..." : "ジャケットから情報を抽出"}
                     </button>
                     <button
                         type="button"
                         onClick={handleClearAll}
                         disabled={isClearing}
-                        className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
+                        className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 active:scale-95"
                     >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span>クリア</span>
+                        クリア
                     </button>
                 </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <AutocompleteInput
-                        label="title"
-                        name="title"
-                        value={title}
-                        onChange={setTitle}
-                        type="title"
-                        artistContext={artist}
-                    />
-                    <AutocompleteInput
-                        label="artist"
-                        name="artist"
-                        value={artist}
-                        onChange={setArtist}
-                        type="artist"
-                    />
+                    <AutocompleteInput label="title" name="title" value={title} onChange={setTitle} type="title" artistContext={artist} />
+                    <AutocompleteInput label="artist" name="artist" value={artist} onChange={setArtist} type="artist" />
                     <div>
                         <label className="block text-sm font-medium text-text-secondary">catalog_no</label>
                         <div className="mt-1 flex gap-2">
-                            <input
-                                name="catalog_no"
-                                value={catalogNo}
-                                onChange={(e) => setCatalogNo(e.target.value)}
-                                className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-text-primary placeholder-text-muted focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleDiscogsSearch}
-                                disabled={isSearching}
-                                className="flex items-center gap-1 rounded bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-                            >
-                                {isSearching ? (
-                                    <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                ) : (
-                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                )}
-                                <span>検索</span>
-                            </button>
+                            <input name="catalog_no" value={catalogNo} onChange={(e) => setCatalogNo(e.target.value)} className="w-full rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none" />
+                            <button type="button" onClick={handleDiscogsSearch} disabled={isSearching} className="rounded bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">検索</button>
                         </div>
                     </div>
                 </div>
 
-                {/* Price Analysis Section */}
-                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold-2 text-[12px] font-black text-black">¥</div>
-                            <span className="text-base font-bold text-gray-900 font-outfit">市場データ分析 (Market Data)</span>
+                {/* --- NEW PRICE ANALYSIS SECTION (Discogs Style) --- */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold-2 text-[14px] font-black text-black shadow-sm">¥</div>
+                            <h3 className="text-lg font-black text-gray-900 tracking-tight">マーケットプレイス相場</h3>
                         </div>
                         <div className="flex gap-2">
                             {priceSuggestions?.releaseId && (
-                                <a
+                                <Link
                                     href={`https://www.discogs.com/release/${priceSuggestions.releaseId}`}
                                     target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 hover:text-black active:scale-95"
+                                    className="flex items-center gap-1 rounded-xl border border-gray-200 px-4 py-2 text-xs font-black text-gray-600 hover:bg-gray-50 hover:text-black transition-colors"
                                 >
-                                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                    <span>詳細</span>
-                                </a>
+                                    <span>Discogsで見る</span>
+                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                </Link>
                             )}
                             <button
                                 type="button"
                                 onClick={handleFetchPriceSuggestions}
                                 disabled={!selectedReleaseId || isFetchingPrice}
                                 className={`
-                                    relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:opacity-50
-                                    ${selectedReleaseId
-                                        ? 'bg-black text-white hover:bg-gray-800 shadow-lg shadow-black/10 ring-2 ring-gold-2/30'
-                                        : 'bg-gray-50 text-gray-400'
-                                    }
+                                    flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black transition-all active:scale-95 disabled:opacity-50
+                                    ${selectedReleaseId ? 'bg-black text-white hover:bg-gray-800 ring-4 ring-gold-2/20' : 'bg-gray-50 text-gray-400'}
                                 `}
                             >
-                                {isFetchingPrice ? (
-                                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                ) : (
-                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                                )}
-                                <span>相場を調べる</span>
+                                {isFetchingPrice ? "取得中..." : "相場を更新"}
                             </button>
                         </div>
                     </div>
 
                     {priceSuggestions ? (
-                        <div className="space-y-5">
-                            {/* Demand Indicators */}
-                            <div className="grid grid-cols-3 gap-3 text-center">
-                                <div className="rounded-2xl bg-pink-50/50 p-3 border border-pink-100/50">
+                        <div className="space-y-6">
+                            {/* Demand Metrics */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="rounded-2xl border border-pink-100 bg-pink-50/30 p-3 text-center">
                                     <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1">Want list</div>
-                                    <div className="text-base font-mono font-black text-pink-600">
-                                        {(priceSuggestions.type === 'suggestions' ? priceSuggestions.stats?.num_want : priceSuggestions.data.community?.want) || '-'}
-                                    </div>
-                                    <div className="text-[8px] text-pink-300 font-bold">ほしい</div>
+                                    <div className="text-lg font-black text-pink-600">{(priceSuggestions.stats?.num_want || priceSuggestions.release?.community?.want) ?? '-'}</div>
+                                    <div className="text-[8px] font-bold text-pink-300">ほしい</div>
                                 </div>
-                                <div className="rounded-2xl bg-blue-50/50 p-3 border border-blue-100/50">
+                                <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-3 text-center">
                                     <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Collection</div>
-                                    <div className="text-base font-mono font-black text-blue-600">
-                                        {(priceSuggestions.type === 'suggestions' ? priceSuggestions.stats?.num_have : priceSuggestions.data.community?.have) || '-'}
-                                    </div>
-                                    <div className="text-[8px] text-blue-300 font-bold">持ってる</div>
+                                    <div className="text-lg font-black text-blue-600">{(priceSuggestions.stats?.num_have || priceSuggestions.release?.community?.have) ?? '-'}</div>
+                                    <div className="text-[8px] font-bold text-blue-300">持ってる</div>
                                 </div>
-                                <div className="rounded-2xl bg-gold-2/10 p-3 border border-gold-2/20">
+                                <div className="rounded-2xl border border-gold-1 bg-gold-2/10 p-3 text-center">
                                     <div className="text-[10px] font-black text-gold-4 uppercase tracking-widest mb-1">Avg Rating</div>
-                                    <div className="flex items-center justify-center gap-1">
-                                        <span className="text-base font-mono font-black text-gold-5">
-                                            {(priceSuggestions.type === 'suggestions' ? priceSuggestions.data.community?.rating?.average : priceSuggestions.data.community?.rating?.average) || '-'}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">/ 5.0</span>
-                                    </div>
-                                    <div className="text-[8px] text-gold-4/60 font-bold">評価点</div>
+                                    <div className="text-lg font-black text-gold-5">{(priceSuggestions.release?.community?.rating?.average)?.toFixed(1) ?? '-'}</div>
+                                    <div className="text-[8px] font-bold text-gold-4/60">評価点</div>
                                 </div>
                             </div>
 
-                            {/* Price Statistics */}
-                            <div className="rounded-2xl bg-gray-50/50 p-5 border border-gray-100 shadow-inner">
-                                <div className="flex items-center justify-between mb-4 px-1">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
-                                            {priceSuggestions.type === 'suggestions' ? 'Seller Price Suggestions' : 'Historical Market Statistics'}
+                            {/* Section 1: Current Listings */}
+                            <div className="rounded-2xl bg-gray-50/50 p-5 border border-gray-100">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="flex items-center gap-2 text-xs font-black text-gray-500 uppercase tracking-widest">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        現在の出品状況
+                                    </h4>
+                                    {priceSuggestions.stats?.num_for_sale !== undefined && (
+                                        <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                            {priceSuggestions.stats.num_for_sale} 点が販売中
                                         </span>
-                                        <span className="text-[9px] text-gray-400 font-bold">
-                                            {priceSuggestions.type === 'suggestions' ? '（コンディション別出品推奨価格）' : '（過去の市場取引統計データ）'}
-                                        </span>
-                                    </div>
-                                    {(priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold) && (
-                                        <div className="text-[10px] text-gray-500 font-bold bg-white px-2 py-1 rounded-lg border border-gray-100">
-                                            Last Sold: <span className="text-black">{priceSuggestions.stats?.last_sold || priceSuggestions.data?.last_sold}</span>
-                                        </div>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-3 gap-3 text-center">
-                                    {[
-                                        { label: 'Low (低)', key: 'low' },
-                                        { label: 'Median (中)', key: 'med' },
-                                        { label: 'High (高)', key: 'high' }
-                                    ].map((p) => {
-                                        let priceObj = null;
-                                        if (priceSuggestions.type === 'suggestions') {
-                                            const map = { low: 'Very Good (VG)', med: 'Very Good Plus (VG+)', high: 'Mint (M)' };
-                                            priceObj = priceSuggestions.data[map[p.key as keyof typeof map]];
-                                        } else {
-                                            const map = { low: 'lowest_price', med: 'median', high: 'highest_price' };
-                                            priceObj = priceSuggestions.stats?.[map[p.key as keyof typeof map]] || priceSuggestions.data?.[map[p.key as keyof typeof map]];
-                                        }
-
-                                        let displayVal = '-';
-                                        let originalLabel = '';
-
-                                        if (priceObj && typeof priceObj === 'object' && priceObj.value !== undefined) {
-                                            const val = priceObj.value;
-                                            const curr = (priceObj.currency || '').toUpperCase();
-
-                                            const isJPY = curr === 'JPY' || curr === '円' || curr === '¥';
-                                            const isUSD = curr === 'USD' || curr === '$';
-
-                                            if (isJPY) {
-                                                displayVal = `¥${Math.round(val).toLocaleString()}`;
-                                            } else if (isUSD) {
-                                                displayVal = `¥${Math.round(val * 150).toLocaleString()}`;
-                                                originalLabel = `$${val.toFixed(2)}`;
-                                            } else if (curr) {
-                                                displayVal = `${curr} ${val.toLocaleString()}`;
-                                            } else {
-                                                // If currency is missing but it's a number, apply smart detection
-                                                if (val > 1000) {
-                                                    displayVal = `¥${Math.round(val).toLocaleString()}`;
-                                                } else {
-                                                    displayVal = val.toLocaleString();
-                                                }
-                                            }
-                                        } else if (typeof priceObj === 'number' && priceObj > 0) {
-                                            // Handle cases where API returns just a number
-                                            // SMART DETECTION: If > 500, it's likely JPY already.
-                                            if (priceObj > 500) {
-                                                displayVal = `¥${Math.round(priceObj).toLocaleString()}`;
-                                            } else {
-                                                // Small number, likely USD
-                                                displayVal = `¥${Math.round(priceObj * 150).toLocaleString()}`;
-                                                originalLabel = `$${priceObj.toFixed(2)}`;
-                                            }
-                                        }
-
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-[10px] font-bold text-gray-400">販売中の最安値:</span>
+                                    {(() => {
+                                        const p = formatDiscogsPrice(priceSuggestions.stats?.lowest_price || (priceSuggestions.release?.lowest_price !== undefined ? { value: priceSuggestions.release.lowest_price, currency: 'USD' } : null));
                                         return (
-                                            <div key={p.key} className={`space-y-1 ${p.key === 'med' ? 'border-x border-gray-100' : ''}`}>
-                                                <div className={`text-[10px] font-bold ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-500'}`}>{p.label}</div>
-                                                <div className={`text-lg font-black leading-none ${p.key === 'med' ? 'text-gold-5' : p.key === 'high' ? 'text-blue-600' : 'text-gray-900'}`}>
-                                                    {displayVal}
-                                                </div>
-                                                {originalLabel && <div className="text-[9px] text-gray-400 font-medium">{originalLabel}</div>}
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-2xl font-black text-gray-900">{p.display}</span>
+                                                <span className="text-[10px] text-gray-400 font-bold">{p.sub}</span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
+                            {/* Section 2: Sales History (Low / Med / High) */}
+                            <div className="rounded-2xl bg-white p-5 border border-gray-100 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-3">
+                                    <div className="text-[8px] font-black text-gray-300 uppercase rotate-90 origin-right">Sales Statistics</div>
+                                </div>
+                                <div className="flex items-center justify-between mb-5">
+                                    <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">過去の売買履歴 (Sales History)</h4>
+                                    <div className="text-[10px] font-bold text-gray-400">
+                                        最終販売: <span className="text-gray-900 font-black">{priceSuggestions.stats?.last_sold ?? priceSuggestions.release?.last_sold ?? 'なし'}</span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
+                                    {[
+                                        { label: '最低 (Low)', key: 'lowest_price' },
+                                        { label: '中間点 (Med)', key: 'median' },
+                                        { label: '最高 (High)', key: 'highest_price' }
+                                    ].map((stat) => {
+                                        const priceData = priceSuggestions.stats?.[stat.key];
+                                        const p = formatDiscogsPrice(priceData);
+                                        return (
+                                            <div key={stat.key} className="space-y-1">
+                                                <div className="text-[10px] font-black text-gray-400">{stat.label}</div>
+                                                <div className={`text-xl font-black ${stat.key === 'median' ? 'text-gold-5' : 'text-gray-900'}`}>{p.display}</div>
+                                                {p.sub && <div className="text-[8px] text-gray-400 font-bold leading-none">{p.sub}</div>}
                                             </div>
                                         );
                                     })}
                                 </div>
-                                {priceSuggestions.type === 'stats' && !priceSuggestions.stats?.median && !priceSuggestions.data?.median && (
-                                    <p className="mt-4 text-[9px] text-center text-gray-400 font-medium">
-                                        ※ 現在統計データが「最安値」のみ提供されているため、中央値・高値は表示されていません。
+
+                                {(!priceSuggestions.stats?.median) && (
+                                    <p className="mt-4 text-[9px] text-gray-400 font-bold leading-relaxed border-t border-gray-50 pt-3">
+                                        ※ Discogs APIの仕様により、販売数が少ないアイテムは「中間点」「最高値」が取得できない場合があります。
+                                        その際はDiscogsサイト上の詳細画面を直接ご確認ください。
                                     </p>
                                 )}
                             </div>
 
-                            <div className="flex items-center justify-between text-[9px] px-1">
-                                <div className="text-gray-400 font-medium italic">
-                                    ※ USD表示のデータは 1ドル=150円 で換算。500以上の数値は円貨として扱っています。
-                                </div>
-                                <details className="group relative">
-                                    <summary className="cursor-pointer text-gray-300 uppercase tracking-tighter list-none hover:text-gray-500 flex items-center gap-1">
-                                        <span>Raw API Data (Debug)</span>
-                                        <svg className="w-2.5 h-2.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                            {/* Section 3: Debug Tools */}
+                            <div className="flex items-center justify-between px-1">
+                                <p className="text-[9px] text-gray-300 font-bold italic">※ 1ドル=150円で算出 / 円貨データはそのまま表示</p>
+                                <details className="group">
+                                    <summary className="cursor-pointer text-gray-300 text-[10px] font-black uppercase list-none hover:text-gray-500 flex items-center gap-1">
+                                        <span>Show API Debug</span>
+                                        <svg className="h-3 w-3 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                                     </summary>
-                                    <div className="absolute right-0 bottom-full mb-3 z-[60] animate-in slide-in-from-bottom-2 fade-in duration-200">
-                                        <div className="max-h-64 w-[320px] overflow-hidden rounded-2xl bg-black/95 shadow-2xl backdrop-blur-xl border border-white/10 ring-1 ring-black">
-                                            <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
-                                                <span className="text-white font-black uppercase tracking-widest text-[8px]">Discogs API Response</span>
-                                                <span className="text-[10px] font-mono text-green-400">JSON</span>
+                                    <div className="absolute left-6 right-6 bottom-full mb-4 z-50">
+                                        <div className="rounded-2xl bg-black/95 p-5 shadow-2xl backdrop-blur-xl border border-white/10 ring-1 ring-black">
+                                            <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Raw Network Response</span>
+                                                <span className="text-[9px] font-mono text-green-400">STATUS: OK</span>
                                             </div>
-                                            <pre className="p-4 overflow-auto max-h-[220px] text-[10px] font-mono text-green-400 scrollbar-thin scrollbar-thumb-white/10">
+                                            <pre className="max-h-60 overflow-auto text-[10px] font-mono text-green-400 scrollbar-thin scrollbar-thumb-white/20">
                                                 {JSON.stringify(priceSuggestions, null, 2)}
                                             </pre>
                                         </div>
@@ -469,16 +420,14 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-300 shadow-sm">
-                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                        <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                            <div className="mb-4 text-gray-300">
+                                <svg className="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                             </div>
-                            <p className="max-w-[200px] text-xs font-medium text-gray-400 leading-relaxed">
+                            <p className="max-w-[240px] text-xs font-bold text-gray-400 leading-relaxed">
                                 {selectedReleaseId
-                                    ? '上のボタンを押すとDiscogsから市場相場データを取得して表示します'
-                                    : '品番でDiscogsを検索し、リリースを確定させると相場を確認できるようになります'}
+                                    ? "「相場を更新」ボタンを押すと、現在の価格推移と統計データを取得します。"
+                                    : "まず上部の品番・Discogs検索でリリースを特定してください。"}
                             </p>
                         </div>
                     )}
@@ -487,62 +436,26 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label className="block text-sm font-medium text-text-secondary">storage_location</label>
-                        <input
-                            name="storage_location"
-                            defaultValue={item.storageLocation ?? ''}
-                            className="mt-1 w-full rounded border border-gray-200 bg-white px-3 py-2 text-text-primary placeholder-text-muted focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2"
-                        />
+                        <input name="storage_location" defaultValue={item.storageLocation ?? ''} className="mt-1 w-full rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none" />
                     </div>
                     <div className="sm:col-span-2">
                         <label className="block text-sm font-medium text-text-secondary">notes</label>
-                        <textarea
-                            name="notes"
-                            defaultValue={item.notes ?? ''}
-                            className="mt-1 w-full rounded border border-gray-200 bg-white px-3 py-2 text-text-primary placeholder-text-muted focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2"
-                            rows={3}
-                        />
+                        <textarea name="notes" defaultValue={item.notes ?? ''} className="mt-1 w-full rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none" rows={3} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-text-secondary">status</label>
-                        <select
-                            name="status"
-                            defaultValue={item.status}
-                            className="mt-1 rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none focus:ring-1 focus:ring-gold-2"
-                        >
+                        <select name="status" defaultValue={item.status} className="mt-1 rounded border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-gold-2 focus:outline-none">
                             {['UNPROCESSED', 'IDENTIFIED', 'READY', 'LISTED', 'SOLD'].map((s) => (
-                                <option key={s} value={s}>
-                                    {s}
-                                </option>
+                                <option key={s} value={s}>{s}</option>
                             ))}
                         </select>
                     </div>
                 </div>
 
                 <div className="flex items-center justify-start gap-4 border-t border-gray-100 pt-6">
-                    <Link
-                        href="/dashboard/items"
-                        className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-lg shadow-gray-100 transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-xl active:scale-95"
-                    >
-                        一覧へ
-                    </Link>
-                    <button
-                        className="rounded-xl bg-black px-8 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all duration-200 hover:scale-105 hover:bg-gold-2 hover:text-black hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:scale-100"
-                        type="submit"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <div className="flex items-center gap-2">
-                                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span>保存中...</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <span>保存する</span>
-                            </div>
-                        )}
+                    <Link href="/dashboard/items" className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all">一覧へ</Link>
+                    <button className="rounded-xl bg-black px-8 py-3 text-sm font-bold text-white shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50" type="submit" disabled={isLoading}>
+                        {isLoading ? "保存中..." : "保存する"}
                     </button>
                     <div className="ml-auto">
                         <DeleteItemButton id={item.id} sku={item.sku} />
@@ -551,13 +464,8 @@ export default function ItemEditForm({ item }: { item: Item }) {
             </form >
 
             {showResultModal && (
-                <DiscogsResultModal
-                    results={searchResults}
-                    onSelect={handleSelectResult}
-                    onClose={() => setShowResultModal(false)}
-                />
-            )
-            }
+                <DiscogsResultModal results={searchResults} onSelect={handleSelectResult} onClose={() => setShowResultModal(false)} />
+            )}
         </>
     );
 }
