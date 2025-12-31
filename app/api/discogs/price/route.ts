@@ -27,13 +27,13 @@ export async function GET(req: NextRequest) {
         const releaseData = releaseRes.ok ? await releaseRes.json() : null;
         const statsData = statsRes.ok ? await statsRes.json() : null;
 
-        // SCRAPING: Force English to ensure "Low", "Median", "High" labels
+        // SCRAPING: Multi-layered extraction
         let scrapedStats: any = null;
         try {
             const htmlRes = await fetch(`https://www.discogs.com/release/${releaseId}`, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept-Language': 'en-US,en;q=0.9' // FORCE ENGLISH for stable scraping
+                    'Accept-Language': 'en-US,en;q=0.9'
                 },
                 cache: 'no-store'
             });
@@ -41,8 +41,13 @@ export async function GET(req: NextRequest) {
             if (htmlRes.ok) {
                 const html = await htmlRes.text();
 
+                // ULTIMATE REGEX: Handles colons, optional spaces, and nested tags
+                // Pattern explanation:
+                // Label (Low/Median/High) + optional colon (:) + closing tag + optional whitespace 
+                // + opening tag of the NEXT element + actual value inside
                 const robustExtract = (label: string) => {
-                    const regex = new RegExp(`${label}\\s*<\\/span>\\s*<span[^>]*>\\s*([^<]+?)\\s*<\\/span>`, 'i');
+                    const pattern = `${label}:?\\s*<\\/[^>]+?>\\s*<[^>]+?>\\s*([^<]+?)<`;
+                    const regex = new RegExp(pattern, 'i');
                     const match = html.match(regex);
                     if (match && match[1]) return match[1].trim();
                     return null;
@@ -52,34 +57,47 @@ export async function GET(req: NextRequest) {
                 const med = robustExtract('Median');
                 const high = robustExtract('High');
 
-                const lastSoldRegex = /Last Sold\s*<\/span>\s*<a[^>]*>\s*<time[^>]*>(.*?)<\/time>/i;
+                // LAST SOLD: Special handling because it's often inside <a><time>
+                // Looking for "Last Sold:" followed by anything until we hit a <time> or the next <span>
+                const lastSoldRegex = /Last Sold:?\s*<[^>]+?>\s*(?:<[^>]+?>\s*)*([^<]+?)</i;
                 const lastSoldMatch = html.match(lastSoldRegex);
-                const lastSold = lastSoldMatch ? lastSoldMatch[1].trim() : null;
+                let lastSold = lastSoldMatch ? lastSoldMatch[1].trim() : null;
 
-                if (low || med || high) {
-                    scrapedStats = { low, med, high, lastSold };
-                    console.log(`[DiscogsPrice] Scraped success (EN): Low=${low}, Med=${med}, High=${high}`);
+                // If the first match is empty or a tag, try to look specifically for <time> content
+                if (!lastSold || lastSold.includes('Sold')) {
+                    const timeRegex = /Last Sold:?\s*<[^>]+?>\s*<a[^>]*>\s*<time[^>]*>([^<]+?)<\/time>/i;
+                    const timeMatch = html.match(timeRegex);
+                    if (timeMatch) lastSold = timeMatch[1].trim();
+                }
+
+                // RELEASED YEAR: Extract from "Released:" line
+                const releasedRegex = /Released:?\s*<[^>]+?>\s*(?:<[^>]+?>\s*)*([^<]+?)</i;
+                const releasedMatch = html.match(releasedRegex);
+                const releasedScraped = releasedMatch ? releasedMatch[1].trim() : null;
+
+                if (low || med || high || lastSold) {
+                    scrapedStats = { low, med, high, lastSold, releasedScraped };
+                    console.log(`[DiscogsPrice] Scraped success: Low=${low}, Med=${med}, High=${high}, LastSold=${lastSold}, Year=${releasedScraped}`);
                 }
             }
         } catch (scrapeErr) {
             console.error('[DiscogsPrice] Scraping error:', scrapeErr);
         }
 
-        // --- MERGE & SEPARATE DATA ---
-        // Enhanced structure with Year
+        // --- MERGE DATA ---
         const finalStats = {
             num_want: statsData?.num_want || releaseData?.community?.want || null,
             num_have: statsData?.num_have || releaseData?.community?.have || null,
             avg_rating: releaseData?.community?.rating?.average || null,
 
-            // Year/Released
-            released: releaseData?.released || releaseData?.released_formatted || releaseData?.year || null,
+            // Released Info (Prioritize Scraped for display accuracy, then API)
+            released: scrapedStats?.releasedScraped || releaseData?.released || releaseData?.released_formatted || releaseData?.year || null,
 
-            // 1. Current Marketplace (For Sale)
+            // Marketplace (For Sale)
             lowest_listing: releaseData?.lowest_price || null,
             num_for_sale: releaseData?.num_for_sale || null,
 
-            // 2. Statistics / Sales History (Historical)
+            // History (Prioritize Scraped for Statistics box parity)
             history_low: scrapedStats?.low || null,
             history_med: scrapedStats?.med || null,
             history_high: scrapedStats?.high || null,
@@ -87,7 +105,7 @@ export async function GET(req: NextRequest) {
         };
 
         return Response.json({
-            type: 'stats_v3',
+            type: 'stats_v4',
             suggestions: suggestionsData,
             release: releaseData,
             stats: finalStats,
