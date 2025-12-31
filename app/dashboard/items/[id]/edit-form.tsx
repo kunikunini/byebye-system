@@ -70,6 +70,13 @@ export default function ItemEditForm({ item }: { item: Item }) {
         }
     };
 
+    const handleSelectResult = (result: any) => {
+        setTitle(result.title);
+        setArtist(result.artist);
+        setSelectedReleaseId(result.id.toString());
+        setShowResultModal(false);
+    };
+
     const handleDiscogsSearch = async () => {
         if (!catalogNo.trim()) return;
         setIsSearching(true);
