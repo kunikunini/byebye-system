@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DeleteItemButton from './delete-button';
@@ -37,6 +37,13 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [isFetchingPrice, setIsFetchingPrice] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
     const [toastMessage, setToastMessage] = useState('完了しました');
+
+    // Guide Phase Logic
+    const guidePhase = useMemo(() => {
+        if (!selectedReleaseId) return 'manual_search'; // Step 1: Search Discogs Result
+        if (selectedReleaseId && !priceSuggestions) return 'fetch_price'; // Step 2: Update Price
+        return 'none'; // Done or Save
+    }, [selectedReleaseId, priceSuggestions]);
 
     const handleClearAll = () => {
         setIsClearing(true);
@@ -139,152 +146,213 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
     return (
         <>
+            <style jsx global>{`
+                @keyframes softPulse {
+                    0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); transform: scale(1); }
+                    50% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); transform: scale(1.02); }
+                    100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); transform: scale(1); }
+                }
+                .next-step-pulse {
+                    animation: softPulse 2s infinite ease-in-out;
+                    z-index: 10;
+                }
+            `}</style>
+
             {/* Toast Notification */}
             {showToast && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
                     <div className="rounded-2xl bg-black/90 px-8 py-5 text-white shadow-2xl backdrop-blur-md animate-in zoom-in-95 fade-in duration-300">
                         <div className="flex flex-col items-center gap-2">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-2 text-black">✓</div>
-                            <p className="text-lg font-bold">{toastMessage}</p>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold-2 text-black font-black">✓</div>
+                            <p className="text-lg font-bold tracking-tight">{toastMessage}</p>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* AI Search Section */}
-            <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/30 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                    <span className="text-blue-600 font-bold text-sm">✨ AIビジュアル検索</span>
+            <div className="mb-6 rounded-3xl border-2 border-dashed border-blue-200 bg-blue-50/20 p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600">
+                        <span className="text-[10px] text-white font-bold italic">AI</span>
+                    </div>
+                    <span className="text-blue-900 font-extrabold text-sm uppercase tracking-wider">Visual Search Support</span>
                 </div>
-                <div className="flex gap-2">
-                    <button type="button" onClick={handleAIAnalyze} disabled={isAnalyzing} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50 transition-all">
-                        {isAnalyzing ? "解析中..." : "ジャケットから検索"}
+                <div className="flex gap-3">
+                    <button type="button" onClick={handleAIAnalyze} disabled={isAnalyzing} className="rounded-2xl bg-blue-600 px-6 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:opacity-50 transition-all">
+                        {isAnalyzing ? "解析中..." : "ジャケットから詳細を埋める"}
                     </button>
-                    <button type="button" onClick={handleClearAll} className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all">クリア</button>
+                    <button type="button" onClick={handleClearAll} className="rounded-2xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all">リセット</button>
                 </div>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); /* submit handled by router refresh */ }} className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-8 pb-12">
+                <div className="grid gap-6 sm:grid-cols-2">
                     <AutocompleteInput label="title" name="title" value={title} onChange={setTitle} type="title" artistContext={artist} />
                     <AutocompleteInput label="artist" name="artist" value={artist} onChange={setArtist} type="artist" />
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-text-secondary mb-1">catalog_no</label>
+
+                    <div className="sm:col-span-1">
+                        <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-2 px-1">catalog_no</label>
                         <div className="flex gap-2">
-                            <input name="catalog_no" value={catalogNo} onChange={(e) => setCatalogNo(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-gold-2/50 outline-none transition-all" />
-                            <button type="button" onClick={handleDiscogsSearch} disabled={isSearching} className="rounded-xl bg-gray-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-black transition-all">検索</button>
+                            <input
+                                name="catalog_no"
+                                value={catalogNo}
+                                onChange={(e) => setCatalogNo(e.target.value)}
+                                placeholder="例: B0022378-01"
+                                className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-3.5 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/20 outline-none transition-all placeholder:text-gray-300"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleDiscogsSearch}
+                                disabled={isSearching || !catalogNo}
+                                className={`whitespace-nowrap rounded-2xl px-6 py-3.5 text-xs font-black transition-all active:scale-95 shadow-lg shadow-black/5 hover:scale-105 ${guidePhase === 'manual_search' && catalogNo ? 'bg-gold-2 text-black next-step-pulse' : 'bg-gray-900 text-white hover:bg-black disabled:opacity-30'}`}
+                            >
+                                {isSearching ? "検索中..." : "Discogsで商品を特定"}
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Price Analysis Card */}
-                <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border-t-[6px] border-t-gold-1">
-                    <div className="flex items-center justify-between gap-4 mb-8">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-2 text-lg font-black text-black">¥</div>
-                            <h3 className="text-xl font-black text-gray-900 tracking-tight">相場分析データ</h3>
+                {/* Price Analysis Section */}
+                <div className="rounded-[2.5rem] border border-gray-100 bg-white p-8 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.03)] relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gold-1 via-gold-2 to-gold-4 opacity-50" />
+
+                    <div className="flex flex-wrap items-center justify-between gap-6 mb-10">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-xl font-black text-gold-2 shadow-xl shadow-black/20">¥</div>
+                            <div>
+                                <h3 className="text-2xl font-black text-gray-900 tracking-tighter">マーケットプレイス相場分析</h3>
+                                {selectedReleaseId && <p className="text-[10px] font-bold text-gray-400 mt-0.5">Release ID: {selectedReleaseId}</p>}
+                            </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                             {selectedReleaseId && (
-                                <Link href={`https://www.discogs.com/release/${selectedReleaseId}`} target="_blank" className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-600 hover:bg-gray-50 transition-all shadow-sm">
+                                <Link href={`https://www.discogs.com/release/${selectedReleaseId}`} target="_blank" className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-6 py-4 text-sm font-black text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-200 active:scale-95">
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                     <span>詳細を確認する</span>
                                 </Link>
                             )}
-                            <button type="button" onClick={handleFetchPriceSuggestions} disabled={!selectedReleaseId || isFetchingPrice} className="rounded-xl bg-black px-6 py-3 text-sm font-black text-white hover:bg-gray-800 disabled:opacity-50 transition-all shadow-xl shadow-black/5">
+                            <button
+                                type="button"
+                                onClick={handleFetchPriceSuggestions}
+                                disabled={!selectedReleaseId || isFetchingPrice}
+                                className={`flex items-center gap-3 rounded-2xl px-8 py-4 text-sm font-black transition-all active:scale-95 shadow-xl disabled:opacity-30 ${guidePhase === 'fetch_price' ? 'bg-gold-2 text-black next-step-pulse shadow-gold-2/20' : 'bg-black text-white hover:bg-gray-800'}`}
+                            >
+                                <svg className={`h-4 w-4 ${isFetchingPrice ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                 {isFetchingPrice ? "取得中..." : "データを更新"}
                             </button>
                         </div>
                     </div>
 
                     {priceSuggestions ? (
-                        <div className="space-y-6">
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             {/* Demand Metrics & Last Sold */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="rounded-2xl border border-gold-1 bg-gold-50/30 p-4 text-center">
-                                    <div className="text-[10px] font-black text-gold-5 uppercase tracking-widest mb-1">最新の販売日</div>
-                                    <div className="text-sm font-black text-gray-900">{priceSuggestions.stats?.last_sold ?? 'データなし'}</div>
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="rounded-3xl border border-gold-1 bg-gold-50/30 p-5 text-center shadow-sm">
+                                    <div className="text-[10px] font-black text-gold-5 uppercase tracking-widest mb-2">最新の販売日</div>
+                                    <div className="text-base font-black text-gray-900">{priceSuggestions.stats?.last_sold ?? 'データなし'}</div>
                                 </div>
-                                <div className="rounded-2xl border border-pink-100 bg-pink-50/20 p-4 text-center">
-                                    <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-1">ほしいリスト</div>
-                                    <div className="text-xl font-black text-pink-600">{priceSuggestions.stats?.num_want ?? '-'}</div>
+                                <div className="rounded-3xl border border-gray-100 bg-gray-50/50 p-5 text-center shadow-sm">
+                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">リリース年度</div>
+                                    <div className="text-base font-black text-gray-900">{priceSuggestions.stats?.released ?? '不明'}</div>
                                 </div>
-                                <div className="rounded-2xl border border-blue-100 bg-blue-50/20 p-4 text-center">
-                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">コレクション</div>
-                                    <div className="text-xl font-black text-blue-600">{priceSuggestions.stats?.num_have ?? '-'}</div>
+                                <div className="rounded-3xl border border-pink-100 bg-pink-50/20 p-5 text-center shadow-sm">
+                                    <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-2">ほしいリスト</div>
+                                    <div className="text-2xl font-black text-pink-600 tracking-tighter">{priceSuggestions.stats?.num_want ?? '-'}</div>
+                                </div>
+                                <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-5 text-center shadow-sm">
+                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">コレクション</div>
+                                    <div className="text-2xl font-black text-blue-600 tracking-tighter">{priceSuggestions.stats?.num_have ?? '-'}</div>
                                 </div>
                             </div>
 
-                            {/* Section 1: Current Best Price (FOR SALE) */}
-                            <div className="rounded-2xl bg-gray-900 p-6 text-white shadow-xl shadow-black/10">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                                        現在の出品状況 (Marketplace)
+                            {/* Section 1: Current Marketplace (FOR SALE) */}
+                            <div className="group rounded-[2rem] bg-gray-900 p-8 text-white shadow-2xl shadow-black/20 hover:scale-[1.01] transition-transform duration-500">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500">
+                                        <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                                        現在の出品状況 (Discogs Marketplace)
                                     </h4>
-                                    <span className="text-[10px] font-bold text-green-400">{priceSuggestions.stats?.num_for_sale ?? 0} 点が販売中</span>
+                                    <span className="rounded-full bg-white/10 px-4 py-1.5 text-[10px] font-black text-green-400 border border-white/10 uppercase tracking-tighter">
+                                        {priceSuggestions.stats?.num_for_sale ?? 0} ITEMS FOR SALE
+                                    </span>
                                 </div>
-                                <div className="flex items-baseline gap-4">
-                                    <span className="text-[11px] font-black text-gray-500 uppercase">販売中の最安値:</span>
+                                <div className="flex items-baseline gap-6 pb-2">
+                                    <span className="text-xs font-black text-gray-500 uppercase">販売中の最安値:</span>
                                     {(() => {
                                         const p = formatDiscogsPrice(priceSuggestions.stats?.lowest_listing);
                                         return (
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-4xl font-black">{p.display}</span>
-                                                <span className="text-xs text-gray-500">{p.sub}</span>
+                                            <div className="flex items-baseline gap-3">
+                                                <span className="text-5xl font-black tracking-tighter bg-gradient-to-br from-white to-white/70 bg-clip-text text-transparent">{p.display}</span>
+                                                {p.sub && <span className="text-sm text-gray-500 font-bold">{p.sub}</span>}
                                             </div>
                                         );
                                     })()}
                                 </div>
+                                <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase tracking-widest italic">※ 現在ウェブサイトに掲載されている最も低い価格です。</p>
                             </div>
 
                             {/* Section 2: Historical Sales Statistics (HISTORY) */}
-                            <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">過去の売買履歴統計 (Sales History)</h4>
-                                <div className="grid grid-cols-3 gap-8">
+                            <div className="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="h-1 w-12 bg-gray-200 rounded-full" />
+                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">過去の売買履歴統計 (Sales History)</h4>
+                                </div>
+                                <div className="grid grid-cols-3 gap-12">
                                     {[
-                                        { label: '最低 (Low)', key: 'history_low' },
+                                        { label: '最低実績 (Low)', key: 'history_low' },
                                         { label: '中間点 (Med)', key: 'history_med' },
-                                        { label: '最高 (High)', key: 'history_high' }
+                                        { label: '最高実績 (High)', key: 'history_high' }
                                     ].map((stat) => {
                                         const p = formatDiscogsPrice(priceSuggestions.stats?.[stat.key]);
                                         return (
-                                            <div key={stat.key} className="space-y-1">
-                                                <div className="text-[11px] font-black text-gray-400 uppercase">{stat.label}</div>
-                                                <div className={`text-2xl font-black tracking-tight ${stat.key === 'history_med' ? 'text-gold-5' : 'text-gray-900'}`}>{p.display}</div>
-                                                {p.sub && <div className="text-[10px] text-gray-400 font-bold">{p.sub}</div>}
+                                            <div key={stat.key} className="space-y-3">
+                                                <div className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{stat.label}</div>
+                                                <div className={`text-3xl font-black tracking-tight ${stat.key === 'history_med' ? 'text-gold-5' : 'text-gray-900'}`}>{p.display}</div>
+                                                {p.sub && <div className="text-[11px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-md inline-block">{p.sub}</div>}
                                             </div>
                                         );
                                     })}
                                 </div>
                                 {priceSuggestions.scraped === false && (
-                                    <p className="mt-6 text-[10px] text-orange-600 font-bold">※ 直接の統計取得が難しいため、詳細ボタンから公式サイトをご確認ください。</p>
+                                    <div className="mt-8 rounded-2xl bg-orange-50/50 p-4 border border-orange-100/50 flex items-center gap-3">
+                                        <span className="text-xl">⚠️</span>
+                                        <p className="text-[11px] text-orange-700 font-bold leading-relaxed">
+                                            Discogs側で統計データが非公開、または取引実績が不足しています。公式サイトの履歴を直接ご確認ください。
+                                        </p>
+                                    </div>
                                 )}
                             </div>
 
-                            <p className="text-[10px] text-gray-400 font-bold italic text-right px-2">
-                                ※ 「現在の最安値」と「履歴の最低額」は異なります。取引状況に合わせて判断してください。
+                            <p className="text-[10px] text-gray-300 font-bold italic text-center pt-2">
+                                「現在の出品最安値（販売中の実売）」と「過去履歴（統計数値）」は異なります。相場感を掴む際の両指標としてお使いください。
                             </p>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                            <p className="text-sm font-bold text-gray-400">🔍 条件を指定して「データを更新」してください。</p>
+                        <div className="flex flex-col items-center justify-center py-24 text-center bg-gray-50/30 rounded-[2rem] border-2 border-dashed border-gray-100">
+                            <div className="mb-6 h-16 w-16 text-gray-100 flex items-center justify-center rounded-full bg-white shadow-inner">
+                                <svg fill="none" viewBox="0 0 24 24" className="h-8 w-8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                            </div>
+                            <h4 className="text-lg font-black text-gray-300 mb-2 italic">Waiting for update...</h4>
+                            <p className="max-w-[320px] text-xs font-bold text-gray-400 leading-relaxed px-6">
+                                {selectedReleaseId ? "左上の「データを更新」ボタンを押すと、公式サイトから最新の販売中および履歴価格を読み込みます。" : "まずは上の入力欄、またはAI検索からDiscogs情報を読み込んでください。"}
+                            </p>
                         </div>
                     )}
                 </div>
 
-                {/* Other Fields & Submit */}
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-6 sm:grid-cols-2">
                     <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-1">storage_location</label>
-                        <input name="storage_location" defaultValue={item.storageLocation ?? ''} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-gold-2/50" />
+                        <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-3 px-1">保管場所 / Storage</label>
+                        <input name="storage_location" defaultValue={item.storageLocation ?? ''} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all" />
                     </div>
                     <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-text-secondary mb-1">notes</label>
-                        <textarea name="notes" defaultValue={item.notes ?? ''} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-gold-2/50" rows={3} />
+                        <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-3 px-1">備考 / Notes</label>
+                        <textarea name="notes" defaultValue={item.notes ?? ''} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all" rows={4} />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-1">status</label>
-                        <select name="status" defaultValue={item.status} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-gold-2/50">
+                        <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-3 px-1">ステータス / Status</label>
+                        <select name="status" defaultValue={item.status} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-black shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all appearance-none cursor-pointer">
                             {['UNPROCESSED', 'IDENTIFIED', 'READY', 'LISTED', 'SOLD'].map((s) => (
                                 <option key={s} value={s}>{s}</option>
                             ))}
@@ -292,21 +360,21 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 border-t border-gray-100 pt-8 pb-4">
-                    <Link href="/dashboard/items" className="rounded-xl border border-gray-300 bg-white px-8 py-4 text-sm font-black text-gray-700 hover:bg-gray-50 transition-all">一覧に戻る</Link>
+                <div className="sticky bottom-6 flex items-center gap-4 rounded-3xl border border-gray-100 bg-white/80 p-6 shadow-2xl backdrop-blur-xl z-20">
+                    <Link href="/dashboard/items" className="rounded-2xl border border-gray-200 bg-white px-8 py-4 text-sm font-black text-gray-600 hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all">一覧へ戻る</Link>
                     <button type="submit" onClick={async (e) => {
                         const form = (e.currentTarget.closest('form') as HTMLFormElement);
                         setIsLoading(true);
                         try {
                             const formData = new FormData(form);
                             await fetch(`/api/items/${item.id}`, { method: 'POST', body: formData });
-                            setToastMessage('保存完了しました');
+                            setToastMessage('変更を保存しました');
                             setShowToast(true);
                             setTimeout(() => { setShowToast(false); router.refresh(); }, 2000);
-                        } catch (err) { alert('保存失敗'); }
+                        } catch (err) { alert('保存できませんでした'); }
                         finally { setIsLoading(false); }
-                    }} className="rounded-xl bg-black px-12 py-4 text-sm font-black text-white shadow-xl hover:translate-y-[-2px] transition-all">
-                        {isLoading ? "保存中..." : "変更を保存"}
+                    }} className="rounded-2xl bg-black px-12 py-4 text-sm font-black text-white shadow-xl shadow-black/20 hover:scale-[1.02] hover:bg-gray-800 active:scale-[0.98] transition-all">
+                        {isLoading ? "保存中..." : "変更を確定して保存"}
                     </button>
                     <div className="ml-auto">
                         <DeleteItemButton id={item.id} sku={item.sku} />
@@ -317,7 +385,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
             {showResultModal && (
                 <DiscogsResultModal results={searchResults} onSelect={(r) => {
                     handleSelectResult(r);
-                    setShowResultModal(false);
                 }} onClose={() => setShowResultModal(false)} />
             )}
         </>

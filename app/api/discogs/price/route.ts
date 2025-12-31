@@ -27,13 +27,13 @@ export async function GET(req: NextRequest) {
         const releaseData = releaseRes.ok ? await releaseRes.json() : null;
         const statsData = statsRes.ok ? await statsRes.json() : null;
 
-        // SCRAPING: Get Sales History (Low/Med/High) from Statistics section
+        // SCRAPING: Force English to ensure "Low", "Median", "High" labels
         let scrapedStats: any = null;
         try {
             const htmlRes = await fetch(`https://www.discogs.com/release/${releaseId}`, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
+                    'Accept-Language': 'en-US,en;q=0.9' // FORCE ENGLISH for stable scraping
                 },
                 cache: 'no-store'
             });
@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
 
                 if (low || med || high) {
                     scrapedStats = { low, med, high, lastSold };
+                    console.log(`[DiscogsPrice] Scraped success (EN): Low=${low}, Med=${med}, High=${high}`);
                 }
             }
         } catch (scrapeErr) {
@@ -65,18 +66,20 @@ export async function GET(req: NextRequest) {
         }
 
         // --- MERGE & SEPARATE DATA ---
-        // We now explicitly separate "Current Listings" from "Sales History"
+        // Enhanced structure with Year
         const finalStats = {
             num_want: statsData?.num_want || releaseData?.community?.want || null,
             num_have: statsData?.num_have || releaseData?.community?.have || null,
+            avg_rating: releaseData?.community?.rating?.average || null,
+
+            // Year/Released
+            released: releaseData?.released || releaseData?.released_formatted || releaseData?.year || null,
 
             // 1. Current Marketplace (For Sale)
-            // lowest_listing corresponds to "From ¥2,828" on the right sidebar (Listing Price)
             lowest_listing: releaseData?.lowest_price || null,
             num_for_sale: releaseData?.num_for_sale || null,
 
             // 2. Statistics / Sales History (Historical)
-            // history_low corresponds to "Low: ¥937" in the Statistics box
             history_low: scrapedStats?.low || null,
             history_med: scrapedStats?.med || null,
             history_high: scrapedStats?.high || null,
@@ -84,7 +87,7 @@ export async function GET(req: NextRequest) {
         };
 
         return Response.json({
-            type: 'stats_v2',
+            type: 'stats_v3',
             suggestions: suggestionsData,
             release: releaseData,
             stats: finalStats,
