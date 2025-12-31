@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        console.log(`[DiscogsPrice] Fetching for releaseId=${releaseId}`);
+        console.log(`[DiscogsPrice] Fetching v6 for releaseId=${releaseId}`);
 
         const apiHeaders = {
             'Authorization': `Discogs token=${token}`,
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
             const htmlRes = await fetch(`https://www.discogs.com/release/${releaseId}`, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8' // Prefer JA but support EN
+                    'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
                 },
                 cache: 'no-store'
             });
@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
             if (htmlRes.ok) {
                 const html = await htmlRes.text();
 
-                // Helper to try multiple labels (e.g. English and Japanese)
                 const extractWithLabels = (labels: string[]) => {
                     for (const label of labels) {
                         const pattern = `${label}:?\\s*<\\/[^>]+?>\\s*<[^>]+?>\\s*([^<]+?)<`;
@@ -59,7 +58,6 @@ export async function GET(req: NextRequest) {
                 const med = extractWithLabels(['Median', '中間点']);
                 const high = extractWithLabels(['High', '高']);
 
-                // LAST SOLD: Multi-language
                 const lastSoldLabels = ['Last Sold', '最新の販売'];
                 let lastSold = null;
                 for (const label of lastSoldLabels) {
@@ -71,20 +69,15 @@ export async function GET(req: NextRequest) {
                     }
                 }
 
-                // Special nested check for Last Sold
                 if (!lastSold || lastSold.length > 30) {
                     const timeMatch = html.match(/(?:Last Sold|最新の販売):?\s*<[^>]+?>\s*<a[^>]*>\s*<time[^>]*>([^<]+?)<\/time>/i);
                     if (timeMatch) lastSold = timeMatch[1].trim();
                 }
 
-                // RELEASED YEAR: Multi-language
                 const releasedScraped = extractWithLabels(['Released', 'リリース済み', 'Released:']);
 
                 if (low || med || high || lastSold) {
                     scrapedStats = { low, med, high, lastSold, releasedScraped };
-                    console.log(`[DiscogsPrice] Scraped success (Multi): Low=${low}, Med=${med}, High=${high}, LastSold=${lastSold}, Year=${releasedScraped}`);
-                } else {
-                    console.warn(`[DiscogsPrice] Scraping failed to find stats for ${releaseId}. HTML Length: ${html.length}`);
                 }
             }
         } catch (scrapeErr) {
@@ -95,24 +88,23 @@ export async function GET(req: NextRequest) {
             num_want: statsData?.num_want || releaseData?.community?.want || null,
             num_have: statsData?.num_have || releaseData?.community?.have || null,
             avg_rating: releaseData?.community?.rating?.average || null,
-
             released: scrapedStats?.releasedScraped || releaseData?.released || releaseData?.released_formatted || releaseData?.year || null,
-
             lowest_listing: releaseData?.lowest_price || null,
             num_for_sale: releaseData?.num_for_sale || null,
-
             history_low: scrapedStats?.low || null,
             history_med: scrapedStats?.med || null,
             history_high: scrapedStats?.high || null,
-            last_sold: scrapedStats?.lastSold || releaseData?.last_sold || null
+            last_sold: scrapedStats?.lastSold || releaseData?.last_sold || null,
+            // RAW SALES HISTORY URL
+            sales_history_url: `https://www.discogs.com/sell/history/${releaseId}`
         };
 
         return Response.json({
-            type: 'stats_v5', // Iteration v5
+            type: 'stats_v6',
             stats: finalStats,
             scraped: !!scrapedStats,
             releaseId,
-            timestamp: new Date().toISOString() // Force client to see freshness
+            timestamp: new Date().toISOString()
         });
     } catch (e) {
         console.error('[DiscogsPrice] Internal error:', e);

@@ -38,11 +38,10 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [isClearing, setIsClearing] = useState(false);
     const [toastMessage, setToastMessage] = useState('完了しました');
 
-    // Guide Phase Logic
     const guidePhase = useMemo(() => {
-        if (!selectedReleaseId) return 'manual_search'; // Step 1: Search Discogs Result
-        if (selectedReleaseId && !priceSuggestions) return 'fetch_price'; // Step 2: Update Price
-        return 'none'; // Done or Save
+        if (!selectedReleaseId) return 'manual_search';
+        if (selectedReleaseId && !priceSuggestions) return 'fetch_price';
+        return 'none';
     }, [selectedReleaseId, priceSuggestions]);
 
     const handleClearAll = () => {
@@ -112,7 +111,8 @@ export default function ItemEditForm({ item }: { item: Item }) {
         if (!selectedReleaseId) return;
         setIsFetchingPrice(true);
         try {
-            const res = await fetch(`/api/discogs/price?releaseId=${selectedReleaseId}`);
+            // CACHE BUSTING: Adding t=timestamp to ensure no browser/server cache is used
+            const res = await fetch(`/api/discogs/price?releaseId=${selectedReleaseId}&t=${Date.now()}`);
             const data = await res.json();
             setPriceSuggestions(data);
             setToastMessage('最新データを反映しました');
@@ -158,7 +158,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 }
             `}</style>
 
-            {/* Toast Notification */}
             {showToast && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
                     <div className="rounded-2xl bg-black/90 px-8 py-5 text-white shadow-2xl backdrop-blur-md animate-in zoom-in-95 fade-in duration-300">
@@ -170,7 +169,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 </div>
             )}
 
-            {/* AI Search Section */}
             <div className="mb-6 rounded-3xl border-2 border-dashed border-blue-200 bg-blue-50/20 p-5 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
                     <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600">
@@ -213,7 +211,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
                     </div>
                 </div>
 
-                {/* Price Analysis Section */}
                 <div className="rounded-[2.5rem] border border-gray-100 bg-white p-8 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.03)] relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gold-1 via-gold-2 to-gold-4 opacity-50" />
 
@@ -222,14 +219,14 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-xl font-black text-gold-2 shadow-xl shadow-black/20">¥</div>
                             <div>
                                 <h3 className="text-2xl font-black text-gray-900 tracking-tighter">マーケットプレイス相場分析</h3>
-                                {selectedReleaseId && <p className="text-[10px] font-bold text-gray-400 mt-0.5">Release ID: {selectedReleaseId}</p>}
+                                {selectedReleaseId && <p className="text-[10px] font-bold text-gray-400 mt-0.5 px-1">Discogs Release ID: {selectedReleaseId}</p>}
                             </div>
                         </div>
                         <div className="flex gap-3">
                             {selectedReleaseId && (
                                 <Link href={`https://www.discogs.com/release/${selectedReleaseId}`} target="_blank" className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-6 py-4 text-sm font-black text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-200 active:scale-95">
                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                    <span>詳細を確認する</span>
+                                    <span>商品ページを見る</span>
                                 </Link>
                             )}
                             <button
@@ -246,7 +243,6 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
                     {priceSuggestions ? (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {/* Demand Metrics & Last Sold */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="rounded-3xl border border-gold-1 bg-gold-50/30 p-5 text-center shadow-sm">
                                     <div className="text-[10px] font-black text-gold-5 uppercase tracking-widest mb-2">最新の販売日</div>
@@ -266,19 +262,58 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                 </div>
                             </div>
 
-                            {/* Section 1: Current Marketplace (FOR SALE) */}
+                            {/* Section 1: History & Raw Data - HIGHLIGHTING MEDIAN */}
+                            <div className="rounded-[2rem] border-4 border-gold-2/30 bg-white p-8 shadow-xl">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-1 w-12 bg-gold-2 rounded-full" />
+                                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest">市場価格の推移 (Sales History)</h4>
+                                    </div>
+                                    {priceSuggestions.stats?.sales_history_url && (
+                                        <Link href={priceSuggestions.stats.sales_history_url} target="_blank" className="flex items-center gap-2 rounded-xl bg-gold-2 px-5 py-2 text-[11px] font-black text-black hover:bg-gold-1 transition-all shadow-md">
+                                            <span>全販売履歴 (生データ) を見る</span>
+                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                        </Link>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-3 gap-12">
+                                    {[
+                                        { label: '実績最低 (Low)', key: 'history_low' },
+                                        { label: '実績平均 (Median)', key: 'history_med' },
+                                        { label: '実績最高 (High)', key: 'history_high' }
+                                    ].map((stat) => {
+                                        const p = formatDiscogsPrice(priceSuggestions.stats?.[stat.key]);
+                                        const isMed = stat.key === 'history_med';
+                                        return (
+                                            <div key={stat.key} className={`space-y-3 p-4 rounded-2xl transition-all ${isMed ? 'bg-gold-50/50 ring-2 ring-gold-2 shadow-inner' : ''}`}>
+                                                <div className="text-[11px] font-black text-gray-400 uppercase tracking-wider">
+                                                    {stat.label}
+                                                    {isMed && <span className="ml-2 text-[9px] bg-gold-2 text-black px-1.5 py-0.5 rounded text-white">信頼性 高</span>}
+                                                </div>
+                                                <div className={`text-3xl font-black tracking-tight ${isMed ? 'text-black text-4xl' : 'text-gray-900'}`}>{p.display}</div>
+                                                {p.sub && <div className="text-[11px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-md inline-block">{p.sub}</div>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <p className="mt-6 text-[11px] text-gray-500 font-bold leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                    💡 <strong className="text-gray-900">プロの判断材料:</strong> 「中間点（Median）」が最も市場の生の動きを反映しています。これまでの安定した取引価格であり、出品時の最優先指標となります。
+                                </p>
+                            </div>
+
+                            {/* Section 2: Current Marketplace */}
                             <div className="group rounded-[2rem] bg-gray-900 p-8 text-white shadow-2xl shadow-black/20 hover:scale-[1.01] transition-transform duration-500">
                                 <div className="flex items-center justify-between mb-6">
                                     <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500">
                                         <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                                        現在の出品状況 (Discogs Marketplace)
+                                        現在販売中の最低価格 (Currently Listed)
                                     </h4>
                                     <span className="rounded-full bg-white/10 px-4 py-1.5 text-[10px] font-black text-green-400 border border-white/10 uppercase tracking-tighter">
                                         {priceSuggestions.stats?.num_for_sale ?? 0} ITEMS FOR SALE
                                     </span>
                                 </div>
                                 <div className="flex items-baseline gap-6 pb-2">
-                                    <span className="text-xs font-black text-gray-500 uppercase">販売中の最安値:</span>
+                                    <span className="text-xs font-black text-gray-500 uppercase">出品中の最安:</span>
                                     {(() => {
                                         const p = formatDiscogsPrice(priceSuggestions.stats?.lowest_listing);
                                         return (
@@ -289,43 +324,11 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                         );
                                     })()}
                                 </div>
-                                <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase tracking-widest italic">※ 現在ウェブサイトに掲載されている最も低い価格です。</p>
-                            </div>
-
-                            {/* Section 2: Historical Sales Statistics (HISTORY) */}
-                            <div className="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="h-1 w-12 bg-gray-200 rounded-full" />
-                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">過去の売買履歴統計 (Sales History)</h4>
-                                </div>
-                                <div className="grid grid-cols-3 gap-12">
-                                    {[
-                                        { label: '最低実績 (Low)', key: 'history_low' },
-                                        { label: '中間点 (Med)', key: 'history_med' },
-                                        { label: '最高実績 (High)', key: 'history_high' }
-                                    ].map((stat) => {
-                                        const p = formatDiscogsPrice(priceSuggestions.stats?.[stat.key]);
-                                        return (
-                                            <div key={stat.key} className="space-y-3">
-                                                <div className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{stat.label}</div>
-                                                <div className={`text-3xl font-black tracking-tight ${stat.key === 'history_med' ? 'text-gold-5' : 'text-gray-900'}`}>{p.display}</div>
-                                                {p.sub && <div className="text-[11px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-md inline-block">{p.sub}</div>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                {priceSuggestions.scraped === false && (
-                                    <div className="mt-8 rounded-2xl bg-orange-50/50 p-4 border border-orange-100/50 flex items-center gap-3">
-                                        <span className="text-xl">⚠️</span>
-                                        <p className="text-[11px] text-orange-700 font-bold leading-relaxed">
-                                            Discogs側で統計データが非公開、または取引実績が不足しています。公式サイトの履歴を直接ご確認ください。
-                                        </p>
-                                    </div>
-                                )}
+                                <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase tracking-widest italic">※ 商品の状態（コンディション）が考慮されていない可能性があるため、実績最低〜平均値も併せてご参照ください。</p>
                             </div>
 
                             <p className="text-[10px] text-gray-300 font-bold italic text-center pt-2">
-                                「現在の出品最安値（販売中の実売）」と「過去履歴（統計数値）」は異なります。相場感を掴む際の両指標としてお使いください。
+                                Data fetched at {new Date(priceSuggestions.timestamp).toLocaleTimeString()} (Fresh Version)
                             </p>
                         </div>
                     ) : (
@@ -333,9 +336,9 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             <div className="mb-6 h-16 w-16 text-gray-100 flex items-center justify-center rounded-full bg-white shadow-inner">
                                 <svg fill="none" viewBox="0 0 24 24" className="h-8 w-8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                             </div>
-                            <h4 className="text-lg font-black text-gray-300 mb-2 italic">Waiting for update...</h4>
+                            <h4 className="text-lg font-black text-gray-300 mb-2 italic">Awaiting sync...</h4>
                             <p className="max-w-[320px] text-xs font-bold text-gray-400 leading-relaxed px-6">
-                                {selectedReleaseId ? "左上の「データを更新」ボタンを押すと、公式サイトから最新の販売中および履歴価格を読み込みます。" : "まずは上の入力欄、またはAI検索からDiscogs情報を読み込んでください。"}
+                                左上の「データを更新」ボタンを押すと、公式サイトの生の取引実績を読み込みます。
                             </p>
                         </div>
                     )}
