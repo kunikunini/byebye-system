@@ -63,14 +63,23 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 body: JSON.stringify({ itemId: item.id }),
             });
             const data = await res.json();
+
+            if (!res.ok) {
+                // Show specific error from API if available
+                alert(`AI分析エラー: ${data.message || data.error || '不明なエラーが発生しました'}`);
+                return;
+            }
+
             if (data.artist) setArtist(data.artist);
             if (data.title) setTitle(data.title);
             if (data.catalogNo) setCatalogNo(data.catalogNo);
+
             setToastMessage('情報を抽出しました');
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
-        } catch (error) {
-            alert('AI分析に失敗しました');
+        } catch (error: any) {
+            console.error('AI Analyze error:', error);
+            alert('AI分析に失敗しました。ネットワーク接続を確認してください。');
         } finally {
             setIsAnalyzing(false);
         }
