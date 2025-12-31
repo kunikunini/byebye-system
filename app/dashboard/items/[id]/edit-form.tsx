@@ -110,8 +110,9 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const handleFetchPriceSuggestions = async () => {
         if (!selectedReleaseId) return;
         setIsFetchingPrice(true);
+        // CLEAR previous stats to show active update
+        setPriceSuggestions(null);
         try {
-            // CACHE BUSTING: Adding t=timestamp to ensure no browser/server cache is used
             const res = await fetch(`/api/discogs/price?releaseId=${selectedReleaseId}&t=${Date.now()}`);
             const data = await res.json();
             setPriceSuggestions(data);
@@ -129,6 +130,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
         if (!rawPrice) return { display: '-', sub: '' };
         if (typeof rawPrice === 'string') {
             const str = rawPrice.trim();
+            // Handle Japanese or currency markers from scraping
             if (str.startsWith('¥') || str.endsWith('JPY') || str.includes('円')) return { display: str, sub: '' };
             if (str.includes('$') || str.includes('USD')) {
                 const numeric = parseFloat(str.replace(/[^0-9.]/g, ''));
@@ -276,22 +278,23 @@ export default function ItemEditForm({ item }: { item: Item }) {
                                         </Link>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-3 gap-12">
+                                <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
                                     {[
                                         { label: '実績最低 (Low)', key: 'history_low' },
-                                        { label: '実績平均 (Median)', key: 'history_med' },
+                                        { label: '実績中間 (Median)', key: 'history_med' },
+                                        { label: '実績平均 (Average)', key: 'history_avg' },
                                         { label: '実績最高 (High)', key: 'history_high' }
                                     ].map((stat) => {
                                         const p = formatDiscogsPrice(priceSuggestions.stats?.[stat.key]);
-                                        const isMed = stat.key === 'history_med';
+                                        const isMain = stat.key === 'history_med' || stat.key === 'history_avg';
                                         return (
-                                            <div key={stat.key} className={`space-y-3 p-4 rounded-2xl transition-all ${isMed ? 'bg-gold-50/50 ring-2 ring-gold-2 shadow-inner' : ''}`}>
-                                                <div className="text-[11px] font-black text-gray-400 uppercase tracking-wider">
+                                            <div key={stat.key} className={`space-y-3 p-4 rounded-2xl transition-all ${isMain ? 'bg-gold-50/50 ring-2 ring-gold-2/50 shadow-inner' : 'bg-gray-50/30'}`}>
+                                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
                                                     {stat.label}
-                                                    {isMed && <span className="ml-2 text-[9px] bg-gold-2 text-black px-1.5 py-0.5 rounded text-white">信頼性 高</span>}
+                                                    {stat.key === 'history_med' && <span className="ml-2 text-[8px] bg-gold-2 text-black px-1 py-0.5 rounded">最重要</span>}
                                                 </div>
-                                                <div className={`text-3xl font-black tracking-tight ${isMed ? 'text-black text-4xl' : 'text-gray-900'}`}>{p.display}</div>
-                                                {p.sub && <div className="text-[11px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-md inline-block">{p.sub}</div>}
+                                                <div className={`text-2xl font-black tracking-tight ${isMain ? 'text-black' : 'text-gray-900'}`}>{p.display}</div>
+                                                {p.sub && <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-md inline-block">{p.sub}</div>}
                                             </div>
                                         );
                                     })}

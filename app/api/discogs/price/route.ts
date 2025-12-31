@@ -13,13 +13,14 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        console.log(`[DiscogsPrice] Fetching v6 for releaseId=${releaseId}`);
+        console.log(`[DiscogsPrice] Fetching v7 (Ultimate History Scrape) for releaseId=${releaseId}`);
 
         const apiHeaders = {
             'Authorization': `Discogs token=${token}`,
             'User-Agent': 'ByeByeSystem/0.1'
         };
 
+        // Cache-busting for API calls too
         const [suggestionsRes, releaseRes, statsRes] = await Promise.all([
             fetch(`https://api.discogs.com/marketplace/price_suggestions/${releaseId}`, { headers: apiHeaders, cache: 'no-store' }),
             fetch(`https://api.discogs.com/releases/${releaseId}`, { headers: apiHeaders, cache: 'no-store' }),
@@ -30,10 +31,12 @@ export async function GET(req: NextRequest) {
         const releaseData = releaseRes.ok ? await releaseRes.json() : null;
         const statsData = statsRes.ok ? await statsRes.json() : null;
 
-        // SCRAPING: Fallback with Multi-language support
         let scrapedStats: any = null;
+
+        // STRATEGY: Scrape both History page (for accurate stats) and Release page (for Year)
         try {
-            const htmlRes = await fetch(`https://www.discogs.com/release/${releaseId}`, {
+            // 1. Scrape Sales History Page
+            const historyRes = await fetch(`https://www.discogs.com/sell/history/${releaseId}`, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
@@ -41,43 +44,45 @@ export async function GET(req: NextRequest) {
                 cache: 'no-store'
             });
 
-            if (htmlRes.ok) {
-                const html = await htmlRes.text();
+            if (historyRes.ok) {
+                const historyHtml = await historyRes.text();
 
-                const extractWithLabels = (labels: string[]) => {
-                    for (const label of labels) {
-                        const pattern = `${label}:?\\s*<\\/[^>]+?>\\s*<[^>]+?>\\s*([^<]+?)<`;
-                        const regex = new RegExp(pattern, 'i');
-                        const match = html.match(regex);
-                        if (match && match[1]) return match[1].trim();
-                    }
+                // Helper to extract value based on the <small> label (History Page structure)
+                const extractHistoryStat = (label: string) => {
+                    // Pattern: ¥1,234\s*<small>Label</small>
+                    const pattern = `([^<]+?)\\s*<small>\\s*${label}\\s*<\\/small>`;
+                    const regex = new RegExp(pattern, 'i');
+                    const match = historyHtml.match(regex);
+                    if (match && match[1]) return match[1].trim();
                     return null;
                 };
 
-                const low = extractWithLabels(['Low', '低']);
-                const med = extractWithLabels(['Median', '中間点']);
-                const high = extractWithLabels(['High', '高']);
+                const low = extractHistoryStat('低') || extractHistoryStat('Low');
+                const med = extractHistoryStat('中間点') || extractHistoryStat('Median');
+                const high = extractHistoryStat('高') || extractHistoryStat('High');
+                const avg = extractHistoryStat('平均') || extractHistoryStat('Average');
 
-                const lastSoldLabels = ['Last Sold', '最新の販売'];
-                let lastSold = null;
-                for (const label of lastSoldLabels) {
-                    const pattern = `${label}:?\\s*<[^>]+?>\\s*(?:<[^>]+?>\\s*)*([^<]+?)<`;
-                    const match = html.match(new RegExp(pattern, 'i'));
-                    if (match && match[1] && !match[1].includes(label)) {
-                        lastSold = match[1].trim();
-                        break;
-                    }
-                }
+                // Last Sold on History Page: <li>最後の販売： Dec 16, 2025</li>
+                const lastSoldMatch = historyHtml.match(/(?:最後の販売：|Last Sold:)\s*([^<]+?)</i);
+                const lastSold = lastSoldMatch ? lastSoldMatch[1].trim() : null;
 
-                if (!lastSold || lastSold.length > 30) {
-                    const timeMatch = html.match(/(?:Last Sold|最新の販売):?\s*<[^>]+?>\s*<a[^>]*>\s*<time[^>]*>([^<]+?)<\/time>/i);
-                    if (timeMatch) lastSold = timeMatch[1].trim();
-                }
+                scrapedStats = { low, med, high, avg, lastSold };
+                console.log(`[DiscogsPrice] Scraped History: Low=${low}, Med=${med}, High=${high}, Avg=${avg}, LastSold=${lastSold}`);
+            }
 
-                const releasedScraped = extractWithLabels(['Released', 'リリース済み', 'Released:']);
-
-                if (low || med || high || lastSold) {
-                    scrapedStats = { low, med, high, lastSold, releasedScraped };
+            // 2. Scrape Release Page (Primarily for Year)
+            const releasePageRes = await fetch(`https://www.discogs.com/release/${releaseId}`, {
+                headers: {
+                    'User-Agent': apiHeaders['User-Agent'],
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                cache: 'no-store'
+            });
+            if (releasePageRes.ok) {
+                const releaseHtml = await releasePageRes.text();
+                const releasedMatch = releaseHtml.match(/Released:?\s*<[^>]+?>\s*(?:<[^>]+?>\s*)*([^<]+?)</i);
+                if (releasedMatch) {
+                    scrapedStats = { ...scrapedStats, releasedYear: releasedMatch[1].trim() };
                 }
             }
         } catch (scrapeErr) {
@@ -88,19 +93,22 @@ export async function GET(req: NextRequest) {
             num_want: statsData?.num_want || releaseData?.community?.want || null,
             num_have: statsData?.num_have || releaseData?.community?.have || null,
             avg_rating: releaseData?.community?.rating?.average || null,
-            released: scrapedStats?.releasedScraped || releaseData?.released || releaseData?.released_formatted || releaseData?.year || null,
+
+            released: scrapedStats?.releasedYear || releaseData?.released || releaseData?.year || null,
+
             lowest_listing: releaseData?.lowest_price || null,
             num_for_sale: releaseData?.num_for_sale || null,
+
             history_low: scrapedStats?.low || null,
             history_med: scrapedStats?.med || null,
             history_high: scrapedStats?.high || null,
+            history_avg: scrapedStats?.avg || null, // NEW: Average price
             last_sold: scrapedStats?.lastSold || releaseData?.last_sold || null,
-            // RAW SALES HISTORY URL
             sales_history_url: `https://www.discogs.com/sell/history/${releaseId}`
         };
 
         return Response.json({
-            type: 'stats_v6',
+            type: 'stats_v7',
             stats: finalStats,
             scraped: !!scrapedStats,
             releaseId,
