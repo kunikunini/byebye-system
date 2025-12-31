@@ -43,9 +43,9 @@ export async function POST(req: NextRequest) {
         const buffer = await blob.arrayBuffer();
         const base64Image = Buffer.from(buffer).toString('base64');
 
-        // Gemini AI Analysis
+        // Gemini AI Analysis: Using gemini-flash-latest for stable performance and high free quota
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `Analyze this record jacket image and extract the following information in JSON format:
 {
