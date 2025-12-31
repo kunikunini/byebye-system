@@ -10,14 +10,13 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        console.log(`[DiscogsPrice] Fetching data for releaseId=${releaseId}`);
+        console.log(`[DiscogsPrice] releaseId=${releaseId}`);
 
         const apiHeaders = {
             'Authorization': `Discogs token=${token}`,
             'User-Agent': 'ByeByeSystem/0.1'
         };
 
-        // Fetch API in parallel
         const [suggestionsRes, releaseRes, statsRes] = await Promise.all([
             fetch(`https://api.discogs.com/marketplace/price_suggestions/${releaseId}`, { headers: apiHeaders }),
             fetch(`https://api.discogs.com/releases/${releaseId}`, { headers: apiHeaders }),
@@ -28,10 +27,9 @@ export async function GET(req: NextRequest) {
         const releaseData = releaseRes.ok ? await releaseRes.json() : null;
         const statsData = statsRes.ok ? await statsRes.json() : null;
 
-        // SCRAPING fallback: Official API doesn't provide Median/High.
+        // SCRAPING: Get Sales History (Low/Med/High) from Statistics section
         let scrapedStats: any = null;
         try {
-            // Adding cache: 'no-store' to force fresh data from Discogs Website
             const htmlRes = await fetch(`https://www.discogs.com/release/${releaseId}`, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -43,19 +41,10 @@ export async function GET(req: NextRequest) {
             if (htmlRes.ok) {
                 const html = await htmlRes.text();
 
-                // More flexible Regex to handle variations in span order, classes, and spacing
                 const robustExtract = (label: string) => {
-                    // Pattern: label text inside a tag, then look for the next tag containing a price (¥, $, etc.)
-                    // Example: <span class="xxx">Median</span><span class="yyy">¥1,234</span>
                     const regex = new RegExp(`${label}\\s*<\\/span>\\s*<span[^>]*>\\s*([^<]+?)\\s*<\\/span>`, 'i');
                     const match = html.match(regex);
                     if (match && match[1]) return match[1].trim();
-
-                    // Fallback for different HTML structures
-                    const fallbackRegex = new RegExp(`${label}:?\\s*<\\/[^>]+?>\\s*<[^>]+?>\\s*([^<]+?)\\s*<`, 'i');
-                    const fallbackMatch = html.match(fallbackRegex);
-                    if (fallbackMatch && fallbackMatch[1]) return fallbackMatch[1].trim();
-
                     return null;
                 };
 
@@ -63,36 +52,39 @@ export async function GET(req: NextRequest) {
                 const med = robustExtract('Median');
                 const high = robustExtract('High');
 
-                // Extract Last Sold
                 const lastSoldRegex = /Last Sold\s*<\/span>\s*<a[^>]*>\s*<time[^>]*>(.*?)<\/time>/i;
                 const lastSoldMatch = html.match(lastSoldRegex);
                 const lastSold = lastSoldMatch ? lastSoldMatch[1].trim() : null;
 
                 if (low || med || high) {
                     scrapedStats = { low, med, high, lastSold };
-                    console.log(`[DiscogsPrice] Scraped stats successfully for ${releaseId}: Low=${low}, Med=${med}, High=${high}`);
                 }
             }
         } catch (scrapeErr) {
             console.error('[DiscogsPrice] Scraping error:', scrapeErr);
         }
 
-        // --- MERGE LOGIC ---
-        // We prioritize scraped strings if they match the "¥XXXX" format 
-        // because the user wants EXACT consistency with the website display.
+        // --- MERGE & SEPARATE DATA ---
+        // We now explicitly separate "Current Listings" from "Sales History"
         const finalStats = {
             num_want: statsData?.num_want || releaseData?.community?.want || null,
             num_have: statsData?.num_have || releaseData?.community?.have || null,
-            // If scraping worked, use 'low' as the representative 'lowest_price'
-            lowest_price: scrapedStats?.low || releaseData?.lowest_price || null,
-            median: scrapedStats?.med || null,
-            highest_price: scrapedStats?.high || null,
-            last_sold: scrapedStats?.lastSold || releaseData?.last_sold || null,
-            num_for_sale: releaseData?.num_for_sale || null
+
+            // 1. Current Marketplace (For Sale)
+            // lowest_listing corresponds to "From ¥2,828" on the right sidebar (Listing Price)
+            lowest_listing: releaseData?.lowest_price || null,
+            num_for_sale: releaseData?.num_for_sale || null,
+
+            // 2. Statistics / Sales History (Historical)
+            // history_low corresponds to "Low: ¥937" in the Statistics box
+            history_low: scrapedStats?.low || null,
+            history_med: scrapedStats?.med || null,
+            history_high: scrapedStats?.high || null,
+            last_sold: scrapedStats?.lastSold || releaseData?.last_sold || null
         };
 
         return Response.json({
-            type: suggestionsData ? 'suggestions' : 'stats',
+            type: 'stats_v2',
             suggestions: suggestionsData,
             release: releaseData,
             stats: finalStats,
