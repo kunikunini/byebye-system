@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
         // Gemini AI Analysis
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
         const prompt = `Analyze this record jacket image and extract the following information in JSON format:
 {
