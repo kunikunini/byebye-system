@@ -7,6 +7,7 @@ import DeleteItemButton from './delete-button';
 import DiscogsResultModal from './discogs-result-modal';
 import AutocompleteInput from './autocomplete-input';
 import UnsavedChangesModal from './unsaved-changes-modal';
+import RankSelector from './rank-selector';
 
 const STATUS_LABELS: Record<string, string> = {
     UNPROCESSED: '未処理',
@@ -21,6 +22,7 @@ type Item = {
     sku: string;
     itemType: 'VINYL' | 'CD' | 'BOOK' | 'OTHER';
     status: 'UNPROCESSED' | 'IDENTIFIED' | 'READY' | 'LISTED' | 'SOLD';
+    rank: 'N' | 'R' | 'SR' | 'SSR' | 'UR';
     title: string | null;
     artist: string | null;
     catalogNo: string | null;
@@ -39,6 +41,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [catalogNo, setCatalogNo] = useState(item.catalogNo ?? '');
     const [title, setTitle] = useState(item.title ?? '');
     const [artist, setArtist] = useState(item.artist ?? '');
+    const [rank, setRank] = useState(item.rank);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [showResultModal, setShowResultModal] = useState(false);
     const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(null);
@@ -248,6 +251,8 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 </div>
             </div>
 
+
+
             {/* Unsaved Changes Warning Modal */}
             <UnsavedChangesModal
                 isOpen={showUnsavedModal}
@@ -257,6 +262,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
             />
 
             <form onSubmit={handleFormSubmit} className="space-y-8 pb-12">
+                <input type="hidden" name="rank" value={rank} />
                 <div className="grid gap-6 sm:grid-cols-2">
                     <AutocompleteInput
                         label="title"
@@ -294,6 +300,10 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm">
+                    <RankSelector value={rank} onChange={(r) => { setRank(r); setIsDirty(true); }} />
                 </div>
 
                 <div className="rounded-[2.5rem] border border-gray-100 bg-white p-8 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.03)] relative overflow-hidden">

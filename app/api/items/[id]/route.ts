@@ -21,6 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     notes: form.get('notes')?.toString() || '',
     storageLocation: form.get('storage_location')?.toString() || null,
     status: form.get('status')?.toString() as any,
+    rank: (form.get('rank')?.toString() as any) || 'N',
     updatedAt: sql`now()`,
   };
 

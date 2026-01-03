@@ -15,6 +15,13 @@
       "when": 1766187095722,
       "tag": "0001_lush_puff_adder",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767405702165,
+      "tag": "0002_legal_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

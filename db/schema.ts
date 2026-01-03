@@ -10,6 +10,8 @@ export const statusEnum = pgEnum('status', [
   'SOLD',
 ]);
 
+export const rankEnum = pgEnum('rank', ['N', 'R', 'SR', 'SSR', 'UR']);
+
 export const captureKindEnum = pgEnum('capture_kind', [
   'front',
   'back',
@@ -23,6 +25,7 @@ export const items = pgTable('items', {
   sku: text('sku').notNull().unique(),
   itemType: itemTypeEnum('item_type').notNull(),
   status: statusEnum('status').notNull().default('UNPROCESSED'),
+  rank: rankEnum('rank').notNull().default('N'),
   title: text('title'),
   artist: text('artist'),
   catalogNo: text('catalog_no'),

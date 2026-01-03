@@ -91,7 +91,7 @@ export default function DeleteItemButton({ id, sku }: { id: string; sku: string 
                 type="button"
                 className="rounded-xl border border-red-200 bg-white px-5 py-3 text-sm font-bold text-red-600 shadow-lg shadow-red-50 transition-all duration-200 hover:scale-105 hover:bg-red-50 hover:shadow-xl active:scale-95"
             >
-                商品を削除
+                削除
             </button>
         </div>
     );

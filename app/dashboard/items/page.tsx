@@ -233,12 +233,25 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
                       </Link>
                     </td>
                     <td className="px-4 py-3 font-mono font-medium relative z-20">
-                      <Link
-                        href={`/dashboard/items/${r.id}`}
-                        className="inline-block px-2.5 py-1 -mx-2 -my-1 rounded-md text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-200 font-bold tracking-tight shadow-sm hover:shadow-md"
-                      >
-                        {r.sku}
-                      </Link>
+                      <div className="flex flex-col gap-1 items-start">
+                        {r.rank && r.rank !== 'N' && (
+                          <span className={`
+                                inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-black border uppercase tracking-tighter
+                                ${r.rank === 'R' ? 'bg-blue-50 text-blue-600 border-blue-200' : ''}
+                                ${r.rank === 'SR' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ''}
+                                ${r.rank === 'SSR' ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' : ''}
+                                ${r.rank === 'UR' ? 'bg-purple-50 text-purple-600 border-purple-200 shadow-sm animate-pulse' : ''}
+                            `}>
+                            {r.rank}
+                          </span>
+                        )}
+                        <Link
+                          href={`/dashboard/items/${r.id}`}
+                          className="inline-block px-2.5 py-1 -mx-2 -my-1 rounded-md text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-200 font-bold tracking-tight shadow-sm hover:shadow-md"
+                        >
+                          {r.sku}
+                        </Link>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-primary whitespace-nowrap relative z-20 font-bold">{r.catalogNo || '-'}</td>
                     <td className="px-4 py-3 text-text-secondary relative z-20">
@@ -284,6 +297,6 @@ export default async function ItemsPage({ searchParams }: { searchParams: Search
           <BatchActionBar />
         </div>
       </div>
-    </ItemsSelectionProvider>
+    </ItemsSelectionProvider >
   );
 }
