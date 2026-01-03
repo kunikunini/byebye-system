@@ -6,6 +6,15 @@ import Link from 'next/link';
 import DeleteItemButton from './delete-button';
 import DiscogsResultModal from './discogs-result-modal';
 import AutocompleteInput from './autocomplete-input';
+import UnsavedChangesModal from './unsaved-changes-modal';
+
+const STATUS_LABELS: Record<string, string> = {
+    UNPROCESSED: '未処理',
+    IDENTIFIED: '特定済み',
+    READY: '準備完了',
+    LISTED: '出品済み',
+    SOLD: '売却済み',
+};
 
 type Item = {
     id: string;
@@ -37,6 +46,50 @@ export default function ItemEditForm({ item }: { item: Item }) {
     const [isFetchingPrice, setIsFetchingPrice] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
     const [toastMessage, setToastMessage] = useState('完了しました');
+
+    // Dirty state tracking
+    const [isDirty, setIsDirty] = useState(false);
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+
+    // Handler for Back button with protection
+    const handleBack = () => {
+        if (isDirty) {
+            setShowUnsavedModal(true);
+        } else {
+            router.push('/dashboard/items');
+        }
+    };
+
+    const handleDiscard = () => {
+        setShowUnsavedModal(false);
+        router.push('/dashboard/items');
+    };
+
+    const handleConfirmSave = async () => {
+        setShowUnsavedModal(false);
+        // Trigger generic submit logic properly?
+        // Since the button is outside the form in the modal, we need access to form ref or just manually invoke.
+        // Actually, easiest is to just use a ref for the form and request submit.
+        const formElement = document.querySelector('form') as HTMLFormElement;
+        if (formElement) formElement.requestSubmit();
+    };
+
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            const formData = new FormData(e.currentTarget);
+            await fetch(`/api/items/${item.id}`, { method: 'POST', body: formData });
+            setToastMessage('変更を保存しました');
+            setShowToast(true);
+            setIsDirty(false); // Reset dirty state
+            setTimeout(() => { setShowToast(false); router.refresh(); }, 2000);
+        } catch (err) {
+            alert('保存できませんでした');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const guidePhase = useMemo(() => {
         if (!selectedReleaseId) return 'manual_search';
@@ -195,10 +248,31 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 </div>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-8 pb-12">
+            {/* Unsaved Changes Warning Modal */}
+            <UnsavedChangesModal
+                isOpen={showUnsavedModal}
+                onSave={handleConfirmSave}
+                onDiscard={handleDiscard}
+                onCancel={() => setShowUnsavedModal(false)}
+            />
+
+            <form onSubmit={handleFormSubmit} className="space-y-8 pb-12">
                 <div className="grid gap-6 sm:grid-cols-2">
-                    <AutocompleteInput label="title" name="title" value={title} onChange={setTitle} type="title" artistContext={artist} />
-                    <AutocompleteInput label="artist" name="artist" value={artist} onChange={setArtist} type="artist" />
+                    <AutocompleteInput
+                        label="title"
+                        name="title"
+                        value={title}
+                        onChange={(v) => { setTitle(v); setIsDirty(true); }}
+                        type="title"
+                        artistContext={artist}
+                    />
+                    <AutocompleteInput
+                        label="artist"
+                        name="artist"
+                        value={artist}
+                        onChange={(v) => { setArtist(v); setIsDirty(true); }}
+                        type="artist"
+                    />
 
                     <div className="sm:col-span-1">
                         <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-2 px-1">catalog_no</label>
@@ -206,7 +280,7 @@ export default function ItemEditForm({ item }: { item: Item }) {
                             <input
                                 name="catalog_no"
                                 value={catalogNo}
-                                onChange={(e) => setCatalogNo(e.target.value)}
+                                onChange={(e) => { setCatalogNo(e.target.value); setIsDirty(true); }}
                                 placeholder="例: B0022378-01"
                                 className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-3.5 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/20 outline-none transition-all placeholder:text-gray-300"
                             />
@@ -254,63 +328,32 @@ export default function ItemEditForm({ item }: { item: Item }) {
 
                     {priceSuggestions ? (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="rounded-3xl border border-gold-1 bg-gold-50/30 p-5 text-center shadow-sm">
-                                    <div className="text-[10px] font-black text-gold-5 uppercase tracking-widest mb-2">最新の販売日</div>
-                                    <div className="text-base font-black text-gray-900">{priceSuggestions.stats?.last_sold ?? 'データなし'}</div>
-                                </div>
-                                <div className="rounded-3xl border border-gray-100 bg-gray-50/50 p-5 text-center shadow-sm">
-                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">リリース年度</div>
-                                    <div className="text-base font-black text-gray-900">{priceSuggestions.stats?.released ?? '不明'}</div>
-                                </div>
-                                <div className="rounded-3xl border border-pink-100 bg-pink-50/20 p-5 text-center shadow-sm">
-                                    <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-2">ほしいリスト</div>
-                                    <div className="text-2xl font-black text-pink-600 tracking-tighter">{priceSuggestions.stats?.num_want ?? '-'}</div>
-                                </div>
-                                <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-5 text-center shadow-sm">
-                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">コレクション</div>
-                                    <div className="text-2xl font-black text-blue-600 tracking-tighter">{priceSuggestions.stats?.num_have ?? '-'}</div>
-                                </div>
-                            </div>
-
-                            {/* Section 1: History & Raw Data - HIGHLIGHTING MEDIAN */}
-                            <div className="rounded-[2rem] border-4 border-gold-2/30 bg-white p-8 shadow-xl">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-1 w-12 bg-gold-2 rounded-full" />
-                                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-widest">市場価格の推移 (Sales History)</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-1 space-y-4">
+                                    <div className="rounded-3xl border border-pink-100 bg-pink-50/20 p-5 text-center shadow-sm">
+                                        <div className="text-[10px] font-black text-pink-400 uppercase tracking-widest mb-2">ほしいリスト</div>
+                                        <div className="text-2xl font-black text-pink-600 tracking-tighter">{priceSuggestions.stats?.num_want ?? '-'}</div>
                                     </div>
-                                    {priceSuggestions.stats?.sales_history_url && (
-                                        <Link href={priceSuggestions.stats.sales_history_url} target="_blank" className="flex items-center gap-2 rounded-xl bg-gold-2 px-5 py-2 text-[11px] font-black text-black hover:bg-gold-1 transition-all shadow-md">
-                                            <span>全販売履歴 (生データ) を見る</span>
-                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                                        </Link>
-                                    )}
+                                    <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-5 text-center shadow-sm">
+                                        <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">コレクション</div>
+                                        <div className="text-2xl font-black text-blue-600 tracking-tighter">{priceSuggestions.stats?.num_have ?? '-'}</div>
+                                    </div>
                                 </div>
-                                <div className="grid grid-cols-2 xl:grid-cols-4 gap-6">
-                                    {[
-                                        { label: '実績最低 (Low)', key: 'history_low' },
-                                        { label: '実績中間 (Median)', key: 'history_med' },
-                                        { label: '実績平均 (Average)', key: 'history_avg' },
-                                        { label: '実績最高 (High)', key: 'history_high' }
-                                    ].map((stat) => {
-                                        const p = formatDiscogsPrice(priceSuggestions.stats?.[stat.key]);
-                                        const isMain = stat.key === 'history_med' || stat.key === 'history_avg';
-                                        return (
-                                            <div key={stat.key} className={`space-y-3 p-4 rounded-2xl transition-all ${isMain ? 'bg-gold-50/50 ring-2 ring-gold-2/50 shadow-inner' : 'bg-gray-50/30'}`}>
-                                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
-                                                    {stat.label}
-                                                    {stat.key === 'history_med' && <span className="ml-2 text-[8px] bg-gold-2 text-black px-1 py-0.5 rounded">最重要</span>}
-                                                </div>
-                                                <div className={`text-2xl font-black tracking-tight ${isMain ? 'text-black' : 'text-gray-900'}`}>{p.display}</div>
-                                                {p.sub && <div className="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-0.5 rounded-md inline-block">{p.sub}</div>}
-                                            </div>
-                                        );
-                                    })}
+                                <div className="md:col-span-2 rounded-[2rem] border border-gold-2/30 bg-gold-50/20 p-6 flex flex-col items-center justify-center text-center shadow-sm">
+                                    <h4 className="text-sm font-black text-gray-900 mb-2">市場実績 (Sales History)</h4>
+                                    <p className="text-[10px] text-gray-500 mb-4 font-medium leading-relaxed">
+                                        過去の取引価格（Low/Mid/High）は、<br />公式サイトで正確な値をご確認ください。
+                                    </p>
+                                    <a
+                                        href={priceSuggestions.stats?.sales_history_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 rounded-2xl bg-gold-2 px-8 py-4 text-sm font-black text-black shadow-lg shadow-gold-2/20 transition-all hover:scale-105 hover:bg-gold-1 hover:shadow-xl active:scale-95"
+                                    >
+                                        <span>販売履歴ページを開く</span>
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                    </a>
                                 </div>
-                                <p className="mt-6 text-[11px] text-gray-500 font-bold leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                    💡 <strong className="text-gray-900">プロの判断材料:</strong> 「中間点（Median）」が最も市場の生の動きを反映しています。これまでの安定した取引価格であり、出品時の最優先指標となります。
-                                </p>
                             </div>
 
                             {/* Section 2: Current Marketplace */}
@@ -359,37 +402,41 @@ export default function ItemEditForm({ item }: { item: Item }) {
                 <div className="grid gap-6 sm:grid-cols-2">
                     <div>
                         <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-3 px-1">保管場所 / Storage</label>
-                        <input name="storage_location" defaultValue={item.storageLocation ?? ''} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all" />
+                        <input name="storage_location" onChange={() => setIsDirty(true)} defaultValue={item.storageLocation ?? ''} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all" />
                     </div>
                     <div className="sm:col-span-2">
                         <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-3 px-1">備考 / Notes</label>
-                        <textarea name="notes" defaultValue={item.notes ?? ''} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all" rows={4} />
+                        <textarea name="notes" onChange={() => setIsDirty(true)} defaultValue={item.notes ?? ''} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-bold shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all" rows={4} />
                     </div>
                     <div>
                         <label className="block text-sm font-black text-gray-500 uppercase tracking-widest mb-3 px-1">ステータス / Status</label>
-                        <select name="status" defaultValue={item.status} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-black shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all appearance-none cursor-pointer">
+                        <select name="status" onChange={() => setIsDirty(true)} defaultValue={item.status} className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 font-black shadow-sm focus:ring-4 focus:ring-gold-2/10 outline-none transition-all appearance-none cursor-pointer">
                             {['UNPROCESSED', 'IDENTIFIED', 'READY', 'LISTED', 'SOLD'].map((s) => (
-                                <option key={s} value={s}>{s}</option>
+                                <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
                             ))}
                         </select>
                     </div>
                 </div>
 
                 <div className="sticky bottom-6 flex items-center gap-4 rounded-3xl border border-gray-100 bg-white/80 p-6 shadow-2xl backdrop-blur-xl z-20">
-                    <Link href="/dashboard/items" className="rounded-2xl border border-gray-200 bg-white px-8 py-4 text-sm font-black text-gray-600 hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all">一覧へ戻る</Link>
-                    <button type="submit" onClick={async (e) => {
-                        const form = (e.currentTarget.closest('form') as HTMLFormElement);
-                        setIsLoading(true);
-                        try {
-                            const formData = new FormData(form);
-                            await fetch(`/api/items/${item.id}`, { method: 'POST', body: formData });
-                            setToastMessage('変更を保存しました');
-                            setShowToast(true);
-                            setTimeout(() => { setShowToast(false); router.refresh(); }, 2000);
-                        } catch (err) { alert('保存できませんでした'); }
-                        finally { setIsLoading(false); }
-                    }} className="rounded-2xl bg-black px-12 py-4 text-sm font-black text-white shadow-xl shadow-black/20 hover:scale-[1.02] hover:bg-gray-800 active:scale-[0.98] transition-all">
-                        {isLoading ? "保存中..." : "変更を確定して保存"}
+                    <button
+                        type="button"
+                        onClick={handleBack}
+                        className="rounded-2xl border border-gray-200 bg-white px-8 py-4 text-sm font-black text-gray-600 hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all"
+                    >
+                        一覧へ戻る
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className={`rounded-2xl px-12 py-4 text-sm font-black transition-all shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98]
+                            ${isDirty
+                                ? 'bg-gold-2 text-black shadow-gold-2/30 animate-pulse'
+                                : 'bg-black text-white hover:bg-gray-800'
+                            }
+                        `}
+                    >
+                        {isLoading ? "保存中..." : "保存"}
                     </button>
                     <div className="ml-auto">
                         <DeleteItemButton id={item.id} sku={item.sku} />

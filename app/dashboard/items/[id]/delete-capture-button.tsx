@@ -49,8 +49,8 @@ export default function DeleteCaptureButton({ id }: { id: string }) {
 
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-10" onClick={() => (isDeleting ? null : setIsOpen(false))} />
-                    <div className="absolute right-0 top-8 z-20 w-48 rounded-lg border border-gray-200 bg-white p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 z-[90]" onClick={() => (isDeleting ? null : setIsOpen(false))} />
+                    <div className="absolute right-0 top-8 z-[95] w-48 rounded-lg border border-gray-200 bg-white p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
                         <p className="mb-2 text-xs font-medium text-gray-900">画像を削除しますか？</p>
                         <div className="flex justify-end gap-2">
                             <button

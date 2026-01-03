@@ -10,13 +10,18 @@ export const metadata = {
   },
 };
 
+import Link from 'next/link';
+import HeaderMenu from './components/header-menu';
+
+// ... (previous code)
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">
       <body className="min-h-screen bg-bg-primary text-text-primary antialiased">
-        <header className="sticky top-0 z-10 border-b border-black/5 bg-gold-2 shadow-sm">
-          <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
-            <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-50 border-b border-black/5 bg-gold-2 shadow-sm">
+          <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+            <Link href="/dashboard/items" className="flex items-center gap-3 transition-opacity hover:opacity-80">
               <Image
                 src="/byebye-logo-mark.svg"
                 alt="ByeBye System"
@@ -25,7 +30,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 className="h-8 w-auto drop-shadow-md"
               />
               <span className="font-semibold tracking-wide text-text-primary">ByeBye System</span>
-            </div>
+            </Link>
+            <HeaderMenu />
           </div>
         </header>
         <main className="mx-auto max-w-5xl p-4">{children}</main>

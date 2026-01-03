@@ -3,7 +3,7 @@ import { items, captures } from '@/db/schema';
 type Item = typeof items.$inferSelect;
 type Capture = typeof captures.$inferSelect;
 
-const TARGET_CAPTURES = { VINYL: 5, CD: 4, BOOK: 5 } as const;
+const TARGET_CAPTURES = { VINYL: 2, CD: 2, BOOK: 2 } as const;
 
 export default function WorkNavigation({
     item,
@@ -41,29 +41,24 @@ export default function WorkNavigation({
     let status = { label: '', color: '', icon: '' };
     let nextActions: string[] = [];
 
-    // Priority Logic
+    // 4. Priority Logic (Strict Front/Back Check)
+    const hasFront = uploadedKinds.has('front');
+    const hasBack = uploadedKinds.has('back');
+
     if (item.status === 'SOLD') {
         status = { label: 'SOLD', color: 'bg-purple-100 text-purple-700 ring-1 ring-purple-600/20', icon: '🟣' };
     } else if (item.status === 'LISTED') {
-        status = { label: 'Listd (出品済)', color: 'bg-blue-100 text-blue-700 ring-1 ring-blue-600/20', icon: '🔵' };
-    } else if (uploadedCount < targetCount) {
-        status = { label: 'Image Missing (画像不足)', color: 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20', icon: '🟡' };
-
-        // Add actions
-        // Prioritize missing kinds
-        missingKinds.forEach(k => nextActions.push(`${k} の画像をアップロードしてください`));
-        // If we have kinds but just not enough count
-        if (nextActions.length === 0 && uploadedCount < targetCount) {
-            nextActions.push(`あと ${targetCount - uploadedCount} 枚、画像を追加してください`);
-        }
+        status = { label: '出品済', color: 'bg-blue-100 text-blue-700 ring-1 ring-blue-600/20', icon: '🔵' };
+    } else if (!hasFront || !hasBack) {
+        status = { label: '画像不足', color: 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20', icon: '🟡' };
+        if (!hasFront) nextActions.push('表面 (Front) の画像を追加してください');
+        if (!hasBack) nextActions.push('裏面 (Back) の画像を追加してください');
     } else if (filledCount < 3) {
-        status = { label: 'Info Missing (情報不足)', color: 'bg-orange-100 text-orange-800 ring-1 ring-orange-600/20', icon: '🟠' }; // Orange for info? List page was Orange.
-
-        // Add actions
+        status = { label: '情報不足', color: 'bg-orange-100 text-orange-800 ring-1 ring-orange-600/20', icon: '🟠' }; // Orange for info? List page was Orange.
         missingFields.forEach(f => nextActions.push(`${f.label} を入力してください`));
     } else {
         // READY
-        status = { label: 'Listable (出品可能)', color: 'bg-green-100 text-green-700 ring-1 ring-green-600/20', icon: '🟢' };
+        status = { label: '出品可能', color: 'bg-green-100 text-green-700 ring-1 ring-green-600/20', icon: '🟢' };
         nextActions.push('マーケットへ出品できます');
     }
 
