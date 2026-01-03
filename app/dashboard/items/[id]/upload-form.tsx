@@ -38,6 +38,56 @@ export default function UploadForm({ itemId, captures = [] }: { itemId: string; 
         await uploadFiles(files);
     };
 
+    const compressImage = async (file: File): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max dimension 1920px
+                const MAX_SIZE = 1920;
+                if (width > height) {
+                    if (width > MAX_SIZE) {
+                        height = Math.round((height * MAX_SIZE) / width);
+                        width = MAX_SIZE;
+                    }
+                } else {
+                    if (height > MAX_SIZE) {
+                        width = Math.round((width * MAX_SIZE) / height);
+                        height = MAX_SIZE;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Canvas context failure'));
+                    return;
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Compression failed'));
+                }, 'image/jpeg', 0.8);
+            };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Image load failed'));
+            };
+
+            img.src = url;
+        });
+    };
+
     const uploadFiles = async (files: FileList) => {
         setIsUploading(true);
         const formData = new FormData();
@@ -50,11 +100,15 @@ export default function UploadForm({ itemId, captures = [] }: { itemId: string; 
 
         formData.append('kind', kind);
 
-        for (let i = 0; i < files.length; i++) {
-            formData.append('file', files[i]);
-        }
-
         try {
+            for (let i = 0; i < files.length; i++) {
+                // Compress each file before appending
+                const compressedBlob = await compressImage(files[i]);
+                // Append with original name (but ensure .jpg extension since we converted)
+                const originalName = files[i].name.replace(/\.[^/.]+$/, "") + ".jpg";
+                formData.append('file', compressedBlob, originalName);
+            }
+
             const res = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
