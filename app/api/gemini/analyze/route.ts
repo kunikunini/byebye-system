@@ -43,10 +43,10 @@ export async function POST(req: NextRequest) {
         const buffer = await blob.arrayBuffer();
         const base64Image = Buffer.from(buffer).toString('base64');
 
-        // Gemini AI Analysis: Using gemini-2.0-flash for high quota and stable performance
+        // Gemini AI Analysis: Using gemini-flash-latest for standard stable Flash model (optimizing for 15 RPM / 1500 RPD)
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
+            model: "gemini-flash-latest",
             generationConfig: {
                 responseMimeType: "application/json",
             }
