@@ -43,9 +43,14 @@ export async function POST(req: NextRequest) {
         const buffer = await blob.arrayBuffer();
         const base64Image = Buffer.from(buffer).toString('base64');
 
-        // Gemini AI Analysis: Using gemini-flash-latest for stable performance and high free quota
+        // Gemini AI Analysis: Using gemini-1.5-flash for better stability and JSON mode support
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+            }
+        });
 
         const prompt = `Analyze this record jacket image and extract the following information in JSON format:
 {
@@ -53,8 +58,7 @@ export async function POST(req: NextRequest) {
   "title": "Album or single title",
   "catalogNo": "Catalog number (if visible, e.g. EYS-81015)"
 }
-If any information is not visible, return an empty string for that field.
-Only return the JSON object, nothing else.`;
+If any information is not visible, return an empty string for that field.`;
 
         const result = await model.generateContent([
             prompt,
@@ -69,18 +73,34 @@ Only return the JSON object, nothing else.`;
         const response = await result.response;
         const text = response.text();
 
-        // Sanitize output (remove markdown blocks if present)
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('AI returned non-JSON response');
+        // With responseMimeType: "application/json", the text should be valid JSON
+        let extractedData;
+        try {
+            extractedData = JSON.parse(text);
+        } catch (e) {
+            console.error('Failed to parse (supposedly) JSON response:', text);
+            // Fallback: try to find JSON block if strict parse fails (though unlikely with JSON mode)
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                extractedData = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('AI returned invalid JSON');
+            }
         }
-
-        const extractedData = JSON.parse(jsonMatch[0]);
 
         return Response.json(extractedData);
 
     } catch (e: any) {
         console.error('Gemini error:', e);
-        return Response.json({ error: 'ai_error', message: e.message }, { status: 500 });
+
+        // Check for common Gemini errors
+        if (e.message?.includes('429')) {
+            return Response.json({ error: 'rate_limit', message: 'AIの利用制限に達しました。しばらく待ってから再試行してください。' }, { status: 429 });
+        }
+        if (e.message?.includes('SAFETY')) {
+            return Response.json({ error: 'safety_block', message: '画像の安全フィルターにより読み取りが拒否されました。' }, { status: 422 });
+        }
+
+        return Response.json({ error: 'ai_error', message: e.message || 'AI分析中に不明なエラーが発生しました' }, { status: 500 });
     }
 }
